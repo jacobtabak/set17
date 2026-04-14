@@ -1,0 +1,231 @@
+CREATE TABLE comp (
+    id TEXT NOT NULL PRIMARY KEY,
+    title TEXT NOT NULL,
+    tier TEXT NOT NULL,
+    style TEXT NOT NULL,
+    difficulty TEXT NOT NULL,
+    comp_slug TEXT NOT NULL UNIQUE,
+    set_number INTEGER NOT NULL,
+    created TEXT NOT NULL,
+    updated TEXT NOT NULL,
+    augments_tip TEXT NOT NULL DEFAULT '',
+    main_champion_api_name TEXT NOT NULL,
+    main_champion_cost INTEGER NOT NULL
+);
+
+CREATE INDEX idx_comp_tier ON comp(tier);
+CREATE INDEX idx_comp_style ON comp(style);
+CREATE INDEX idx_comp_difficulty ON comp(difficulty);
+
+-- Champions in comps. role: "final", "early", "alt", "maxcap"
+CREATE TABLE comp_champion (
+    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    comp_id TEXT NOT NULL REFERENCES comp(id) ON DELETE CASCADE,
+    role TEXT NOT NULL,
+    api_name TEXT NOT NULL,
+    stars INTEGER NOT NULL DEFAULT 1,
+    board_index INTEGER,
+    position_in_list INTEGER NOT NULL
+);
+
+CREATE INDEX idx_comp_champion_comp ON comp_champion(comp_id, role);
+CREATE INDEX idx_comp_champion_name ON comp_champion(api_name);
+
+-- Items equipped on champions
+CREATE TABLE champion_item (
+    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    comp_champion_id INTEGER NOT NULL REFERENCES comp_champion(id) ON DELETE CASCADE,
+    api_name TEXT NOT NULL,
+    position_in_list INTEGER NOT NULL
+);
+
+CREATE INDEX idx_champion_item_name ON champion_item(api_name);
+
+-- Which unit a maxcap champion replaces
+CREATE TABLE maxcap_predecessor (
+    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    comp_champion_id INTEGER NOT NULL REFERENCES comp_champion(id) ON DELETE CASCADE,
+    api_name TEXT NOT NULL
+);
+
+-- Recommended augments per comp
+CREATE TABLE comp_augment (
+    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    comp_id TEXT NOT NULL REFERENCES comp(id) ON DELETE CASCADE,
+    api_name TEXT NOT NULL,
+    disabled INTEGER NOT NULL DEFAULT 0,
+    position_in_list INTEGER NOT NULL
+);
+
+CREATE INDEX idx_comp_augment_comp ON comp_augment(comp_id);
+
+-- Augment type categories per comp (ECON, ITEMS, COMBAT, HERO)
+CREATE TABLE comp_augment_type (
+    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    comp_id TEXT NOT NULL REFERENCES comp(id) ON DELETE CASCADE,
+    type TEXT NOT NULL
+);
+
+-- Carousel priority items
+CREATE TABLE comp_carousel (
+    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    comp_id TEXT NOT NULL REFERENCES comp(id) ON DELETE CASCADE,
+    api_name TEXT NOT NULL,
+    position_in_list INTEGER NOT NULL
+);
+
+-- Stage-by-stage tips
+CREATE TABLE comp_tip (
+    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    comp_id TEXT NOT NULL REFERENCES comp(id) ON DELETE CASCADE,
+    stage TEXT NOT NULL,
+    tip TEXT NOT NULL,
+    position_in_list INTEGER NOT NULL
+);
+
+-- Static item recipe mapping (base component -> completed item)
+CREATE TABLE item_recipe (
+    completed_item TEXT NOT NULL,
+    component TEXT NOT NULL,
+    PRIMARY KEY (completed_item, component)
+);
+
+CREATE INDEX idx_item_recipe_component ON item_recipe(component);
+
+-- ===================== QUERIES =====================
+
+selectAllComps:
+SELECT * FROM comp ORDER BY
+    CASE tier
+        WHEN 'S' THEN 0
+        WHEN 'A' THEN 1
+        WHEN 'B' THEN 2
+        WHEN 'C' THEN 3
+        WHEN 'X' THEN 4
+        ELSE 5
+    END,
+    title;
+
+selectCompBySlug:
+SELECT * FROM comp WHERE comp_slug = ?;
+
+selectCompById:
+SELECT * FROM comp WHERE id = ?;
+
+selectCompsByTier:
+SELECT * FROM comp WHERE tier = ? ORDER BY title;
+
+selectCompsByDifficulty:
+SELECT * FROM comp WHERE difficulty = ? ORDER BY tier, title;
+
+selectCompsByStyle:
+SELECT * FROM comp WHERE style = ? ORDER BY tier, title;
+
+-- Find comps that use a specific champion (any role)
+selectCompsByChampion:
+SELECT DISTINCT c.* FROM comp c
+INNER JOIN comp_champion cc ON c.id = cc.comp_id
+WHERE cc.api_name = ?
+ORDER BY c.tier, c.title;
+
+-- Find comps that use a specific champion in a specific role
+selectCompsByChampionAndRole:
+SELECT DISTINCT c.* FROM comp c
+INNER JOIN comp_champion cc ON c.id = cc.comp_id
+WHERE cc.api_name = ? AND cc.role = ?
+ORDER BY c.tier, c.title;
+
+-- Find comps that use a specific completed item
+selectCompsByItem:
+SELECT DISTINCT c.* FROM comp c
+INNER JOIN comp_champion cc ON c.id = cc.comp_id
+INNER JOIN champion_item ci ON cc.id = ci.comp_champion_id
+WHERE ci.api_name = ?
+ORDER BY c.tier, c.title;
+
+-- Find comps that need a specific base component (via item_recipe)
+selectCompsByComponent:
+SELECT DISTINCT c.* FROM comp c
+INNER JOIN comp_champion cc ON c.id = cc.comp_id
+INNER JOIN champion_item ci ON cc.id = ci.comp_champion_id
+INNER JOIN item_recipe ir ON ci.api_name = ir.completed_item
+WHERE ir.component = ?
+ORDER BY c.tier, c.title;
+
+selectChampionsForComp:
+SELECT * FROM comp_champion WHERE comp_id = ? AND role = ? ORDER BY position_in_list;
+
+selectItemsForChampion:
+SELECT * FROM champion_item WHERE comp_champion_id = ? ORDER BY position_in_list;
+
+selectPredecessors:
+SELECT * FROM maxcap_predecessor WHERE comp_champion_id = ?;
+
+selectAugmentsForComp:
+SELECT * FROM comp_augment WHERE comp_id = ? ORDER BY position_in_list;
+
+selectAugmentTypesForComp:
+SELECT type FROM comp_augment_type WHERE comp_id = ?;
+
+selectCarouselForComp:
+SELECT * FROM comp_carousel WHERE comp_id = ? ORDER BY position_in_list;
+
+selectTipsForComp:
+SELECT * FROM comp_tip WHERE comp_id = ? ORDER BY position_in_list;
+
+selectComponentsForItem:
+SELECT component FROM item_recipe WHERE completed_item = ?;
+
+selectItemsUsingComponent:
+SELECT completed_item FROM item_recipe WHERE component = ?;
+
+selectDistinctChampionNamesByRole:
+SELECT DISTINCT api_name FROM comp_champion WHERE role = ? ORDER BY api_name;
+
+compCount:
+SELECT COUNT(*) FROM comp;
+
+deleteAllComps:
+DELETE FROM comp;
+
+deleteAllRecipes:
+DELETE FROM item_recipe;
+
+insertComp:
+INSERT OR REPLACE INTO comp(id, title, tier, style, difficulty, comp_slug, set_number, created, updated, augments_tip, main_champion_api_name, main_champion_cost)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+insertCompChampion:
+INSERT INTO comp_champion(comp_id, role, api_name, stars, board_index, position_in_list)
+VALUES (?, ?, ?, ?, ?, ?);
+
+lastInsertRowId:
+SELECT last_insert_rowid();
+
+insertChampionItem:
+INSERT INTO champion_item(comp_champion_id, api_name, position_in_list)
+VALUES (?, ?, ?);
+
+insertMaxcapPredecessor:
+INSERT INTO maxcap_predecessor(comp_champion_id, api_name)
+VALUES (?, ?);
+
+insertCompAugment:
+INSERT INTO comp_augment(comp_id, api_name, disabled, position_in_list)
+VALUES (?, ?, ?, ?);
+
+insertCompAugmentType:
+INSERT INTO comp_augment_type(comp_id, type)
+VALUES (?, ?);
+
+insertCompCarousel:
+INSERT INTO comp_carousel(comp_id, api_name, position_in_list)
+VALUES (?, ?, ?);
+
+insertCompTip:
+INSERT INTO comp_tip(comp_id, stage, tip, position_in_list)
+VALUES (?, ?, ?, ?);
+
+insertItemRecipe:
+INSERT OR IGNORE INTO item_recipe(completed_item, component)
+VALUES (?, ?);
