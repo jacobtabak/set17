@@ -19,11 +19,11 @@ object TftColors {
     val chipDisabled = Color(0xFF111118)
     val chipDisabledText = Color(0xFF444455)
 
-    val tierS = Color(0xFFFFD700)
-    val tierA = Color(0xFFAA66FF)
-    val tierB = Color(0xFF4488FF)
-    val tierC = Color(0xFF44BB66)
-    val tierX = Color(0xFF888888)
+    val tierS = Color(0xFFE85466)
+    val tierA = Color(0xFFEE8844)
+    val tierB = Color(0xFFE8D44D)
+    val tierC = Color(0xFFAADD44)
+    val tierX = Color(0xFF77DDDD)
 
     fun tierColor(tier: Tier): Color = when (tier) {
         Tier.S -> tierS

@@ -14,4 +14,7 @@ data class EarlyGameState(
     val selectedComp: Comp? = null,
     val championSort: ChampionSort = ChampionSort.FLEX_RATING,
     val filterText: String = "",
+    val componentCounts: Map<String, Int> = emptyMap(),
+    val componentScores: Map<String, Int> = emptyMap(),
+    val allComps: List<CompRecommendation> = emptyList(),
 )

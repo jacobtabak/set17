@@ -19,7 +19,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.set17.earlygame.EarlyGameEngine
-import dev.set17.earlygame.model.ChampionSort
 import dev.set17.earlygame.model.EarlyGameState
 import dev.set17.tftacademy.api.TftAcademyRepository
 import kotlinx.coroutines.Dispatchers
@@ -57,14 +56,16 @@ fun EarlyGameScreen(
                 loading = false,
                 earlyChampionPool = engine.getEarlyChampionPool(),
                 championScores = engine.scoreChampions(),
+                componentScores = engine.scoreComponents(),
+                allComps = engine.allComps(),
             )
         } catch (e: Exception) {
             state = state.copy(loading = false, error = e.message)
         }
     }
 
-    LaunchedEffect(state.selectedChampions) {
-        val recs = engine.recommend(state.selectedChampions)
+    LaunchedEffect(state.selectedChampions, state.componentCounts) {
+        val recs = engine.recommend(state.selectedChampions, state.componentCounts)
         state = state.copy(recommendations = recs)
     }
 
@@ -97,13 +98,6 @@ fun EarlyGameScreen(
                         }
                     }
 
-                    val toggleSort = {
-                        val next = when (state.championSort) {
-                            ChampionSort.FLEX_RATING -> ChampionSort.ALPHABETICAL
-                            ChampionSort.ALPHABETICAL -> ChampionSort.FLEX_RATING
-                        }
-                        state = state.copy(championSort = next)
-                    }
                     val toggleChampion = { champ: String ->
                         val new = if (champ in state.selectedChampions)
                             state.selectedChampions - champ
@@ -114,17 +108,42 @@ fun EarlyGameScreen(
                     val onFilterChanged = { text: String ->
                         state = state.copy(filterText = text)
                     }
+                    val clearAll = {
+                        state = state.copy(
+                            selectedChampions = emptySet(),
+                            componentCounts = emptyMap(),
+                            filterText = "",
+                            selectedComp = null,
+                        )
+                    }
+                    val incrementComponent = { c: String ->
+                        val cur = state.componentCounts[c] ?: 0
+                        if (cur < 3) state = state.copy(componentCounts = state.componentCounts + (c to cur + 1))
+                    }
+                    val decrementComponent = { c: String ->
+                        val cur = state.componentCounts[c] ?: 0
+                        if (cur > 0) {
+                            val new = if (cur == 1) state.componentCounts - c else state.componentCounts + (c to cur - 1)
+                            state = state.copy(componentCounts = new)
+                        }
+                    }
 
                     if (isWide) {
                         WideLayout(
                             state = state,
                             engine = engine,
                             onToggleChampion = toggleChampion,
+                            onIncrementComponent = incrementComponent,
+                            onDecrementComponent = decrementComponent,
                             onFilterChanged = onFilterChanged,
-                            onToggleSort = toggleSort,
+                            onClearAll = clearAll,
                             onSelectComp = { slug ->
-                                val comp = engine.getFullComp(slug)
-                                state = state.copy(selectedComp = comp)
+                                if (state.selectedComp?.compSlug == slug) {
+                                    state = state.copy(selectedComp = null)
+                                } else {
+                                    val comp = engine.getFullComp(slug)
+                                    state = state.copy(selectedComp = comp)
+                                }
                             },
                             onCloseDetail = { state = state.copy(selectedComp = null) },
                         )
@@ -132,8 +151,10 @@ fun EarlyGameScreen(
                         NarrowLayout(
                             state = state,
                             onToggleChampion = toggleChampion,
+                            onIncrementComponent = incrementComponent,
+                            onDecrementComponent = decrementComponent,
                             onFilterChanged = onFilterChanged,
-                            onToggleSort = toggleSort,
+                            onClearAll = clearAll,
                             onSelectComp = { slug -> onNavigateToComp(slug) },
                         )
                     }
@@ -148,8 +169,10 @@ private fun WideLayout(
     state: EarlyGameState,
     engine: EarlyGameEngine,
     onToggleChampion: (String) -> Unit,
+    onIncrementComponent: (String) -> Unit,
+    onDecrementComponent: (String) -> Unit,
     onFilterChanged: (String) -> Unit,
-    onToggleSort: () -> Unit,
+    onClearAll: () -> Unit,
     onSelectComp: (String) -> Unit,
     onCloseDetail: () -> Unit,
 ) {
@@ -162,8 +185,10 @@ private fun WideLayout(
         ListColumn(
             state = state,
             onToggleChampion = onToggleChampion,
+            onIncrementComponent = onIncrementComponent,
+            onDecrementComponent = onDecrementComponent,
             onFilterChanged = onFilterChanged,
-            onToggleSort = onToggleSort,
+            onClearAll = onClearAll,
             onSelectComp = onSelectComp,
             modifier = Modifier.weight(1f).fillMaxHeight(),
         )
@@ -187,15 +212,19 @@ private fun WideLayout(
 private fun NarrowLayout(
     state: EarlyGameState,
     onToggleChampion: (String) -> Unit,
+    onIncrementComponent: (String) -> Unit,
+    onDecrementComponent: (String) -> Unit,
     onFilterChanged: (String) -> Unit,
-    onToggleSort: () -> Unit,
+    onClearAll: () -> Unit,
     onSelectComp: (String) -> Unit,
 ) {
     ListColumn(
         state = state,
         onToggleChampion = onToggleChampion,
+        onIncrementComponent = onIncrementComponent,
+        onDecrementComponent = onDecrementComponent,
         onFilterChanged = onFilterChanged,
-        onToggleSort = onToggleSort,
+        onClearAll = onClearAll,
         onSelectComp = onSelectComp,
         modifier = Modifier.fillMaxSize(),
     )
@@ -205,8 +234,10 @@ private fun NarrowLayout(
 private fun ListColumn(
     state: EarlyGameState,
     onToggleChampion: (String) -> Unit,
+    onIncrementComponent: (String) -> Unit,
+    onDecrementComponent: (String) -> Unit,
     onFilterChanged: (String) -> Unit,
-    onToggleSort: () -> Unit,
+    onClearAll: () -> Unit,
     onSelectComp: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -214,26 +245,13 @@ private fun ListColumn(
         modifier = modifier.padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                text = "EARLY GAME CHAMPIONS",
-                color = TftColors.textMuted,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 1.sp,
-            )
-            Spacer(Modifier.weight(1f))
-            val sortLabel = when (state.championSort) {
-                ChampionSort.FLEX_RATING -> "flex rating"
-                ChampionSort.ALPHABETICAL -> "A-Z"
-            }
-            Text(
-                text = "sort: $sortLabel",
-                color = TftColors.chipSelectedBorder,
-                fontSize = 11.sp,
-                modifier = Modifier.clickable(onClick = onToggleSort),
-            )
-        }
+        Text(
+            text = "EARLY GAME CHAMPIONS",
+            color = TftColors.textMuted,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold,
+            letterSpacing = 1.sp,
+        )
         OutlinedTextField(
             value = state.filterText,
             onValueChange = onFilterChanged,
@@ -257,28 +275,58 @@ private fun ListColumn(
             champions = state.earlyChampionPool,
             selectedChampions = state.selectedChampions,
             championScores = state.championScores,
-            sort = state.championSort,
             filter = state.filterText,
             onToggle = onToggleChampion,
         )
 
+        Text(
+            text = "ITEM COMPONENTS",
+            color = TftColors.textMuted,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold,
+            letterSpacing = 1.sp,
+        )
+        ComponentSelectorRow(
+            componentCounts = state.componentCounts,
+            componentScores = state.componentScores,
+            onIncrement = onIncrementComponent,
+            onDecrement = onDecrementComponent,
+        )
+
         HorizontalDivider(color = TftColors.border)
 
-        if (state.selectedChampions.isEmpty()) {
+        val nothingSelected = state.selectedChampions.isEmpty() && state.componentCounts.isEmpty()
+        if (nothingSelected) {
             Text(
-                text = "Select champions you have to see comp recommendations",
-                color = TftColors.textMuted,
-                fontSize = 13.sp,
-                modifier = Modifier.padding(vertical = 24.dp),
-            )
-        } else {
-            Text(
-                text = "RECOMMENDED COMPS (${state.recommendations.size})",
+                text = "TIER LIST",
                 color = TftColors.textMuted,
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
                 letterSpacing = 1.sp,
             )
+            CompRecommendationList(
+                recommendations = state.allComps,
+                selectedSlug = state.selectedComp?.compSlug,
+                onSelect = onSelectComp,
+                modifier = Modifier.weight(1f),
+            )
+        } else {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "RECOMMENDED COMPS (${state.recommendations.size})",
+                    color = TftColors.textMuted,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.sp,
+                )
+                Spacer(Modifier.weight(1f))
+                Text(
+                    text = "Clear all",
+                    color = TftColors.chipSelectedBorder,
+                    fontSize = 11.sp,
+                    modifier = Modifier.clickable(onClick = onClearAll),
+                )
+            }
             CompRecommendationList(
                 recommendations = state.recommendations,
                 selectedSlug = state.selectedComp?.compSlug,

@@ -82,7 +82,26 @@ object ItemComponentMap {
         result
     }
 
+    /** Items that indicate a champion is a tank. */
+    val DEFENSIVE_ITEMS = setOf(
+        "TFT_Item_WarmogsArmor",
+        "TFT_Item_BrambleVest",
+        "TFT_Item_DragonsClaw",
+        "TFT_Item_GargoyleStoneplate",
+        "TFT_Item_RedBuff",
+        "TFT_Item_Redemption",
+        "TFT_Item_NightHarvester",
+        "TFT_Item_Crownguard",
+        "TFT_Item_SteraksGage",
+        "TFT_Item_TitansResolve",
+        "TFT_Item_SpectralGauntlet",
+        "TFT_Item_FrozenHeart",
+        "TFT_Item_IonicSpark",
+    )
+
     fun componentsOf(completedItem: String): Pair<String, String>? = recipes[completedItem]
 
     fun isComponent(apiName: String): Boolean = apiName in BASE_COMPONENTS
+
+    fun isDefensiveItem(apiName: String): Boolean = apiName in DEFENSIVE_ITEMS
 }

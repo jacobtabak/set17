@@ -6,7 +6,7 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import dev.set17.earlygame.model.ChampionSort
+import dev.set17.tftacademy.champion.ChampionData
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -14,24 +14,22 @@ fun ChampionSelectorGrid(
     champions: List<String>,
     selectedChampions: Set<String>,
     championScores: Map<String, Int>,
-    sort: ChampionSort,
     filter: String,
     onToggle: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val filtered = if (filter.isBlank()) {
-        champions
+    val pool = if (filter.isBlank()) {
+        val withScore = champions.filter { (championScores[it] ?: 0) > 0 }
+        val selected = selectedChampions.filter { it !in withScore }
+        withScore + selected
     } else {
         val query = filter.lowercase()
-        champions.filter {
+        ChampionData.champions.keys.filter {
             it.removePrefix("TFT17_").removePrefix("TFT_").lowercase().contains(query)
         }
     }
 
-    val sorted = when (sort) {
-        ChampionSort.FLEX_RATING -> filtered.sortedByDescending { championScores[it] ?: 0 }
-        ChampionSort.ALPHABETICAL -> filtered.sortedBy { it.removePrefix("TFT17_").removePrefix("TFT_") }
-    }
+    val sorted = pool.sortedByDescending { championScores[it] ?: 0 }
 
     FlowRow(
         modifier = modifier,
@@ -40,10 +38,12 @@ fun ChampionSelectorGrid(
     ) {
         for (champ in sorted) {
             val score = championScores[champ] ?: 0
+            val cost = ChampionData.champions[champ]?.cost ?: 1
             ChampionChip(
                 name = champ.removePrefix("TFT17_").removePrefix("TFT_"),
                 selected = champ in selectedChampions,
                 score = score,
+                costColor = TftColors.costColor(cost),
                 onClick = { onToggle(champ) },
             )
         }

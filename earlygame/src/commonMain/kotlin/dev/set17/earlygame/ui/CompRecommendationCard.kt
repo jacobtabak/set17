@@ -55,30 +55,57 @@ fun CompRecommendationCard(
                 )
             }
 
-            Spacer(Modifier.height(6.dp))
+            if (recommendation.matchedEarlyChampions.isNotEmpty()) {
+                Spacer(Modifier.height(6.dp))
 
-            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("Have: ", color = TftColors.textSecondary, fontSize = 12.sp)
-                Text(
-                    text = recommendation.matchedEarlyChampions.joinToString(", ") {
-                        it.removePrefix("TFT17_")
-                    },
-                    color = TftColors.matchedChampion,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium,
-                )
-            }
-
-            if (recommendation.missingEarlyChampions.isNotEmpty()) {
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text("Need: ", color = TftColors.textSecondary, fontSize = 12.sp)
+                    Text("Have: ", color = TftColors.textSecondary, fontSize = 12.sp)
                     Text(
-                        text = recommendation.missingEarlyChampions.joinToString(", ") {
+                        text = recommendation.matchedEarlyChampions.joinToString(", ") {
                             it.removePrefix("TFT17_")
                         },
-                        color = TftColors.missingChampion,
+                        color = TftColors.matchedChampion,
                         fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
                     )
+                }
+
+                if (recommendation.missingEarlyChampions.isNotEmpty()) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text("Need: ", color = TftColors.textSecondary, fontSize = 12.sp)
+                        Text(
+                            text = recommendation.missingEarlyChampions.joinToString(", ") {
+                                it.removePrefix("TFT17_")
+                            },
+                            color = TftColors.missingChampion,
+                            fontSize = 12.sp,
+                        )
+                    }
+                }
+            }
+
+            if (recommendation.craftableCarryItems.isNotEmpty()) {
+                Spacer(Modifier.height(4.dp))
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text("Can craft:", color = TftColors.matchedChampion, fontSize = 12.sp)
+                    for (item in recommendation.craftableCarryItems) {
+                        ItemIcon(apiName = item, modifier = Modifier.height(18.dp))
+                    }
+                }
+            }
+
+            if (recommendation.partialCarryItems.isNotEmpty()) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text("1 away:", color = TftColors.missingChampion, fontSize = 12.sp)
+                    for (item in recommendation.partialCarryItems) {
+                        ItemIcon(apiName = item, modifier = Modifier.height(18.dp))
+                    }
                 }
             }
         }

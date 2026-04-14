@@ -12,6 +12,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -21,11 +22,12 @@ fun ChampionChip(
     name: String,
     selected: Boolean,
     score: Int,
+    costColor: Color = TftColors.chipDefaultBorder,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val bg = if (selected) TftColors.chipSelected else TftColors.chipDefault
-    val border = if (selected) TftColors.chipSelectedBorder else TftColors.chipDefaultBorder
+    val border = if (selected) costColor else costColor.copy(alpha = 0.5f)
     val textColor = if (selected) TftColors.textPrimary else TftColors.textSecondary
 
     Surface(

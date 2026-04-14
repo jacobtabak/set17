@@ -3,6 +3,7 @@ package dev.set17.earlygame.ui
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
@@ -74,24 +75,34 @@ fun CompDetailPanel(
             }
         }
         Spacer(Modifier.height(4.dp))
-        for (champ in comp.finalComp) {
-            val info = ChampionData.champions[champ.apiName] ?: continue
-            val name = info.name
-            val cost = info.cost
-            val stars = if (champ.stars > 1) " \u2605".repeat(champ.stars) else ""
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = "$name$stars",
-                    color = TftColors.costColor(cost),
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Normal,
-                    modifier = Modifier.widthIn(min = 120.dp),
-                )
-                for (item in champ.items) {
-                    ItemIcon(apiName = item, modifier = Modifier.height(20.dp))
+        Row {
+            // Name column — intrinsic width matches the longest name
+            Column(modifier = Modifier.width(IntrinsicSize.Max)) {
+                for (champ in comp.finalComp) {
+                    val info = ChampionData.champions[champ.apiName] ?: continue
+                    val stars = if (champ.stars > 1) " \u2605".repeat(champ.stars) else ""
+                    Text(
+                        text = "${info.name}$stars",
+                        color = TftColors.costColor(info.cost),
+                        fontSize = 13.sp,
+                        modifier = Modifier.fillMaxWidth().height(24.dp),
+                    )
+                }
+            }
+            Spacer(Modifier.width(12.dp))
+            // Items column
+            Column {
+                for (champ in comp.finalComp) {
+                    if (champ.apiName !in ChampionData.champions) continue
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.height(24.dp),
+                    ) {
+                        for (item in champ.items) {
+                            ItemIcon(apiName = item, modifier = Modifier.height(20.dp))
+                        }
+                    }
                 }
             }
         }

@@ -7,4 +7,7 @@ data class CompRecommendation(
     val matchedEarlyChampions: List<String>,
     val missingEarlyChampions: List<String>,
     val score: Int,
+    val craftableCarryItems: List<String> = emptyList(),
+    val partialCarryItems: List<String> = emptyList(),
+    val itemScore: Int = 0,
 )
