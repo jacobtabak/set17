@@ -1,5 +1,8 @@
 package dev.set17.tftacademy.db
 
+import app.cash.sqldelight.async.coroutines.awaitAsList
+import app.cash.sqldelight.async.coroutines.awaitAsOne
+import app.cash.sqldelight.async.coroutines.awaitAsOneOrNull
 import dev.set17.tftacademy.model.Augment
 import dev.set17.tftacademy.model.Champion
 import dev.set17.tftacademy.model.CompSummary
@@ -15,14 +18,14 @@ class DbMapper(private val database: TftAcademyDatabase) {
 
     private val q get() = database.tftAcademyQueries
 
-    fun replaceAll(comps: List<ParsedComp>) {
+    suspend fun replaceAll(comps: List<ParsedComp>) {
         database.transaction {
             q.deleteAllComps()
-            comps.forEach(::insertComp)
+            comps.forEach { insertComp(it) }
         }
     }
 
-    fun seedItemRecipes(recipes: Map<String, Pair<String, String>>) {
+    suspend fun seedItemRecipes(recipes: Map<String, Pair<String, String>>) {
         database.transaction {
             q.deleteAllRecipes()
             for ((completed, components) in recipes) {
@@ -34,7 +37,7 @@ class DbMapper(private val database: TftAcademyDatabase) {
         }
     }
 
-    private fun insertComp(comp: ParsedComp) {
+    private suspend fun insertComp(comp: ParsedComp) {
         q.insertComp(
             id = comp.id,
             title = comp.title,
@@ -69,7 +72,7 @@ class DbMapper(private val database: TftAcademyDatabase) {
         }
     }
 
-    private fun insertChampions(compId: String, role: String, champions: List<ParsedChampion>) {
+    private suspend fun insertChampions(compId: String, role: String, champions: List<ParsedChampion>) {
         champions.forEachIndexed { i, champ ->
             q.insertCompChampion(
                 comp_id = compId,
@@ -79,14 +82,14 @@ class DbMapper(private val database: TftAcademyDatabase) {
                 board_index = champ.boardIndex?.toLong(),
                 position_in_list = i.toLong(),
             )
-            val champId = q.lastInsertRowId().executeAsOne()
+            val champId = q.lastInsertRowId().awaitAsOne()
             champ.items.forEachIndexed { j, item ->
                 q.insertChampionItem(champId, item, j.toLong())
             }
         }
     }
 
-    private fun insertMaxCapChampions(compId: String, maxCap: List<ParsedMaxCapChampion>) {
+    private suspend fun insertMaxCapChampions(compId: String, maxCap: List<ParsedMaxCapChampion>) {
         maxCap.forEachIndexed { i, champ ->
             q.insertCompChampion(
                 comp_id = compId,
@@ -96,7 +99,7 @@ class DbMapper(private val database: TftAcademyDatabase) {
                 board_index = null,
                 position_in_list = i.toLong(),
             )
-            val champId = q.lastInsertRowId().executeAsOne()
+            val champId = q.lastInsertRowId().awaitAsOne()
             champ.items.forEachIndexed { j, item ->
                 q.insertChampionItem(champId, item, j.toLong())
             }
@@ -106,50 +109,50 @@ class DbMapper(private val database: TftAcademyDatabase) {
         }
     }
 
-    fun readAllSummaries(): List<CompSummary> {
-        return q.selectAllComps().executeAsList().map { it.toSummary() }
+    suspend fun readAllSummaries(): List<CompSummary> {
+        return q.selectAllComps().awaitAsList().map { it.toSummary() }
     }
 
-    fun readSummariesByTier(tier: String): List<CompSummary> {
-        return q.selectCompsByTier(tier).executeAsList().map { it.toSummary() }
+    suspend fun readSummariesByTier(tier: String): List<CompSummary> {
+        return q.selectCompsByTier(tier).awaitAsList().map { it.toSummary() }
     }
 
-    fun readSummariesByDifficulty(difficulty: String): List<CompSummary> {
-        return q.selectCompsByDifficulty(difficulty).executeAsList().map { it.toSummary() }
+    suspend fun readSummariesByDifficulty(difficulty: String): List<CompSummary> {
+        return q.selectCompsByDifficulty(difficulty).awaitAsList().map { it.toSummary() }
     }
 
-    fun readSummariesByStyle(style: String): List<CompSummary> {
-        return q.selectCompsByStyle(style).executeAsList().map { it.toSummary() }
+    suspend fun readSummariesByStyle(style: String): List<CompSummary> {
+        return q.selectCompsByStyle(style).awaitAsList().map { it.toSummary() }
     }
 
-    fun readSummariesByChampion(apiName: String): List<CompSummary> {
-        return q.selectCompsByChampion(apiName).executeAsList().map { it.toSummary() }
+    suspend fun readSummariesByChampion(apiName: String): List<CompSummary> {
+        return q.selectCompsByChampion(apiName).awaitAsList().map { it.toSummary() }
     }
 
-    fun readSummariesByItem(itemApiName: String): List<CompSummary> {
-        return q.selectCompsByItem(itemApiName).executeAsList().map { it.toSummary() }
+    suspend fun readSummariesByItem(itemApiName: String): List<CompSummary> {
+        return q.selectCompsByItem(itemApiName).awaitAsList().map { it.toSummary() }
     }
 
-    fun readSummariesByComponent(componentApiName: String): List<CompSummary> {
-        return q.selectCompsByComponent(componentApiName).executeAsList().map { it.toSummary() }
+    suspend fun readSummariesByComponent(componentApiName: String): List<CompSummary> {
+        return q.selectCompsByComponent(componentApiName).awaitAsList().map { it.toSummary() }
     }
 
-    fun readSummariesByChampionAndRole(apiName: String, role: String): List<CompSummary> {
-        return q.selectCompsByChampionAndRole(apiName, role).executeAsList().map { it.toSummary() }
+    suspend fun readSummariesByChampionAndRole(apiName: String, role: String): List<CompSummary> {
+        return q.selectCompsByChampionAndRole(apiName, role).awaitAsList().map { it.toSummary() }
     }
 
-    fun readDistinctChampionNamesByRole(role: String): List<String> {
-        return q.selectDistinctChampionNamesByRole(role).executeAsList()
+    suspend fun readDistinctChampionNamesByRole(role: String): List<String> {
+        return q.selectDistinctChampionNamesByRole(role).awaitAsList()
     }
 
-    fun readFullComp(compSlug: String): DomainComp? {
-        val row = q.selectCompBySlug(compSlug).executeAsOneOrNull() ?: return null
+    suspend fun readFullComp(compSlug: String): DomainComp? {
+        val row = q.selectCompBySlug(compSlug).awaitAsOneOrNull() ?: return null
         return assembleComp(row)
     }
 
-    fun compCount(): Long = q.compCount().executeAsOne()
+    suspend fun compCount(): Long = q.compCount().awaitAsOne()
 
-    private fun assembleComp(row: Comp): DomainComp {
+    private suspend fun assembleComp(row: Comp): DomainComp {
         val id = row.id
         return DomainComp(
             id = id,
@@ -167,26 +170,26 @@ class DbMapper(private val database: TftAcademyDatabase) {
             finalComp = loadChampions(id, "final"),
             altBuilds = loadChampions(id, "alt"),
             maxCap = loadMaxCapChampions(id),
-            augments = q.selectAugmentsForComp(id).executeAsList().map {
+            augments = q.selectAugmentsForComp(id).awaitAsList().map {
                 Augment(it.api_name, it.disabled != 0L)
             },
-            augmentTypes = q.selectAugmentTypesForComp(id).executeAsList(),
-            carousel = q.selectCarouselForComp(id).executeAsList().map { it.api_name },
-            tips = q.selectTipsForComp(id).executeAsList().map { Tip(it.stage, it.tip) },
+            augmentTypes = q.selectAugmentTypesForComp(id).awaitAsList(),
+            carousel = q.selectCarouselForComp(id).awaitAsList().map { it.api_name },
+            tips = q.selectTipsForComp(id).awaitAsList().map { Tip(it.stage, it.tip) },
         )
     }
 
-    private fun loadChampions(compId: String, role: String): List<Champion> {
-        return q.selectChampionsForComp(compId, role).executeAsList().map { cc ->
-            val items = q.selectItemsForChampion(cc.id).executeAsList().map { it.api_name }
+    private suspend fun loadChampions(compId: String, role: String): List<Champion> {
+        return q.selectChampionsForComp(compId, role).awaitAsList().map { cc ->
+            val items = q.selectItemsForChampion(cc.id).awaitAsList().map { it.api_name }
             Champion(cc.api_name, cc.stars.toInt(), cc.board_index?.toInt(), items)
         }
     }
 
-    private fun loadMaxCapChampions(compId: String): List<MaxCapChampion> {
-        return q.selectChampionsForComp(compId, "maxcap").executeAsList().map { cc ->
-            val items = q.selectItemsForChampion(cc.id).executeAsList().map { it.api_name }
-            val preds = q.selectPredecessors(cc.id).executeAsList().map { it.api_name }
+    private suspend fun loadMaxCapChampions(compId: String): List<MaxCapChampion> {
+        return q.selectChampionsForComp(compId, "maxcap").awaitAsList().map { cc ->
+            val items = q.selectItemsForChampion(cc.id).awaitAsList().map { it.api_name }
+            val preds = q.selectPredecessors(cc.id).awaitAsList().map { it.api_name }
             MaxCapChampion(cc.api_name, cc.stars.toInt(), items, preds)
         }
     }

@@ -1,16 +1,27 @@
 # set17
 
-Kotlin Multiplatform app for TFT Set 17 early game decision-making, powered by data from [TFT Academy](https://tftacademy.com).
+Kotlin Multiplatform app for TFT Set 17 comp recommendations, powered by data from [TFT Academy](https://tftacademy.com).
 
 ## What it does
 
-Helps you decide which champions to buy and which items to build during TFT stages 1-2 (before the first augment selection). Select the champions and item components you have, and the app recommends S/A/B tier comps ranked by how well your current board and items fit.
+Two modes for different stages of the game:
 
-**Two input signals:**
-- **Champions**: Which early game units you have — matched against each comp's early board
-- **Item components**: Which base components you have (BF Sword, Rod, etc.) — matched against the carry's items in each comp
+**Early Game** — You're in stages 1-2 before the first augment. Select the champions you see in shop and the item components you have. The app recommends S/A/B tier comps ranked by how well your current board and items fit the comp's early game plan.
 
-**Scoring**: Comps are ranked by a combined score. Having a fully craftable carry item is the strongest signal, weighted by comp tier (S > A > B). Components are consumed as they match to prevent double-counting. When nothing is selected, a full tier list is shown.
+**Late Game** — You're looking for your final comp. Search for specific champions, select completed items and emblems you already have, and the app shows which comps your board fits best.
+
+### Input signals
+
+- **Champions**: Matched against earlyComp (early tab) or finalComp (late tab)
+- **Item components**: Base components (10 types including Spatula/Frying Pan) with quantity support
+- **Completed items**: Full items you already have — direct match against comp item slots (late game)
+- **Emblems**: Craftable trait emblems (16 types) — matched as build-defining items
+
+### Scoring
+
+Comps ranked by a combined score. All weights multiplied by tier (S=3, A=2, B=1). Items are scored by role in the comp (carry > emblem > tank > support) with components consumed in priority order to prevent double-counting.
+
+When nothing is selected, a full tier list is shown.
 
 ## Modules
 
@@ -20,17 +31,19 @@ Data layer. Fetches the TFT Academy comp tier list via their SvelteKit `__data.j
 
 - 44 comps with full boards, items, augments, stage-by-stage tips
 - Queryable by champion, item, base component, tier, difficulty, style
-- Static data: item recipes (Community Dragon), champion traits and costs (mobalytics), trait breakpoints
+- Static data: item recipes + display names (Community Dragon), champion traits/costs (mobalytics), trait breakpoints, emblem recipes, defensive item classification
 
 ### earlygame
 
-Early game advisor logic + Compose UI.
+Game advisor logic + Compose UI.
 
-- **EarlyGameEngine**: Scores champions and item components by flexibility across S/A/B comps. Recommends comps based on champion matches and item craftability with tier-weighted scoring. Scoring weights are documented constants that can be tuned.
+- **EarlyGameEngine**: Phase-aware scoring (early vs late). 9-phase item matching with configurable weights in `ScoringConfig`. Tank detection via defensive item set. Emblem detection with unknown emblem warnings.
+- **Early/Late tabs**: Fixed tab bar with shared champion/item state. Early tab shows champion flex grid, late tab shows search-to-add champions with completed items and emblems.
 - **Adaptive layout**: Side-by-side panels on wide screens (animated open/close), fullscreen navigation on narrow/mobile. Preserves selection across resize transitions.
-- **Comp detail**: Final board with cost-colored champion names, item icons (loaded from TFT Academy CDN), activated traits (only those hitting breakpoints), early comp, carousel priority, stage tips
-- **Champion selector**: Filterable grid with cost-colored borders and flex ratings. Search finds all champions, not just early-game ones. Zero-flex champions hidden unless searched or selected.
-- **Item component selector**: +/- stepper for each of the 8 base components, supporting multiple counts (e.g. 2x BF Sword for Deathblade)
+- **Collapsible sections**: Champions, item components, completed items, emblems — each with selected count indicator when collapsed.
+- **Comp detail**: Aligned columns with cost-colored champion names, item icons (TFT Academy CDN), activated traits at breakpoints, early comp, carousel priority, stage tips.
+- **Item display**: Icon-based selectors with +/- quantity controls. Item names use current in-game display names from Community Dragon.
+- **Scrollable**: Entire screen is a single LazyColumn with tabs pinned at top.
 
 ### composeApp
 
@@ -48,16 +61,16 @@ Entry point. Compose Navigation with type-safe `@Serializable` routes. Platform 
 | Desktop | `composeApp/src/desktopMain` | Working |
 | Android | `composeApp/src/androidMain` (MainActivity) | Compiles |
 | iOS | `composeApp/src/iosMain` (MainViewController) | Compiles (needs Xcode project) |
-| Web | `composeApp/src/wasmJsMain` | Compiles |
+| Web | `composeApp/src/wasmJsMain` | Working |
 
 ## Tech stack
 
 - **Kotlin Multiplatform** 2.2.10
-- **Compose Multiplatform** 1.8.2
+- **Compose Multiplatform** 1.10.3
 - **Compose Navigation** 2.9.2 (type-safe routes)
 - **Ktor** 3.1.3 (HTTP)
 - **kotlinx.serialization** (JSON)
-- **SQLDelight** 2.0.2 (local database)
+- **SQLDelight** 2.3.2 (local database, async for wasmJs)
 - **Coil** 3.4.0 (async image loading for item icons)
 - **Compose Hot Reload** 1.0.0
 - **Gradle** 8.14
@@ -67,6 +80,9 @@ Entry point. Compose Navigation with type-safe `@Serializable` routes. Platform 
 ```bash
 # Run the desktop app (with hot reload)
 ./gradlew :composeApp:hotRunDesktop
+
+# Run the web app (wasmJs)
+./gradlew :composeApp:wasmJsBrowserDevelopmentRun
 
 # Run tests
 ./gradlew :tftacademy:jvmTest
@@ -80,18 +96,21 @@ Entry point. Compose Navigation with type-safe `@Serializable` routes. Platform 
 
 ## Scoring algorithm
 
-Comps are ranked by a single combined score. All weights are multiplied by tier weight (S=3, A=2, B=1).
+All weights multiplied by tier weight (S=3, A=2, B=1). Components/items consumed in priority order.
 
-| Signal | Weight | Description |
-|--------|--------|-------------|
-| Full carry item | 7 × tier | Both components available — can slam immediately |
-| Partial carry item | 2 × tier | 1 of 2 components available |
-| Carousel match | 1 × tier | Component matches comp's carousel priority |
-| Champion match | 1 × tier | Champion in comp's early board |
+| Phase | Signal | Weight | Description |
+|-------|--------|--------|-------------|
+| 0 | Full item direct match | role weight × tier | User already has the completed item |
+| 1 | Carry item 1-2 full | 7 × tier | Both components available |
+| 2 | Carry item 3 full | 5 × tier | Third carry item, slightly less priority |
+| 3 | Emblem full | 7 × tier | Build-defining emblem craftable |
+| 4 | Tank item full | 6 × tier | Tank item craftable |
+| 5 | Support item full | 4 × tier | Non-carry/tank item craftable |
+| 6-8 | Partial matches | 1-2 × tier | 1 of 2 components available |
+| 9 | Carousel match | 1 × tier | Component in carousel priority |
+| — | Champion match | 1 × tier | Champion in early/final board |
 
-Components are consumed in priority order (full > partial > carousel) to prevent double-counting. Comps require a non-zero score to appear.
-
-These weights are tunable constants in `EarlyGameEngine.kt`.
+Weights are tunable constants in `ScoringConfig.kt`.
 
 ## Database schema
 

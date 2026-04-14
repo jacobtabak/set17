@@ -12,6 +12,6 @@ fun main() = application {
         title = "Set 17 — Early Game Advisor",
         state = rememberWindowState(width = 1200.dp, height = 800.dp),
     ) {
-        App(DriverFactory())
+        App(DriverFactory("tftacademy.db"))
     }
 }

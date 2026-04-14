@@ -4,9 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.NavHost
@@ -69,12 +67,15 @@ fun App(driverFactory: DriverFactory) {
                 }
 
                 if (!isWide) {
-                    val comp = remember(route.slug) { repo.getComp(route.slug) }
-                    if (comp != null) {
+                    var comp by remember { mutableStateOf<dev.set17.tftacademy.model.Comp?>(null) }
+                    LaunchedEffect(route.slug) {
+                        comp = repo.getComp(route.slug)
+                    }
+                    comp?.let { c ->
                         Box(
                             modifier = Modifier.fillMaxSize().background(TftColors.surface),
                         ) {
-                            CompDetailPanel(comp, onBack = { navController.popBackStack() })
+                            CompDetailPanel(c, onBack = { navController.popBackStack() })
                         }
                     }
                 }

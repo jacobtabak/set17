@@ -62,7 +62,7 @@ fun CompRecommendationCard(
                     Text("Have: ", color = TftColors.textSecondary, fontSize = 12.sp)
                     Text(
                         text = recommendation.matchedEarlyChampions.joinToString(", ") {
-                            it.removePrefix("TFT17_")
+                            dev.set17.tftacademy.champion.ChampionData.displayName(it)
                         },
                         color = TftColors.matchedChampion,
                         fontSize = 12.sp,
@@ -75,7 +75,7 @@ fun CompRecommendationCard(
                         Text("Need: ", color = TftColors.textSecondary, fontSize = 12.sp)
                         Text(
                             text = recommendation.missingEarlyChampions.joinToString(", ") {
-                                it.removePrefix("TFT17_")
+                                dev.set17.tftacademy.champion.ChampionData.displayName(it)
                             },
                             color = TftColors.missingChampion,
                             fontSize = 12.sp,
@@ -90,7 +90,7 @@ fun CompRecommendationCard(
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text("Can craft:", color = TftColors.matchedChampion, fontSize = 12.sp)
+                    Text("Items:", color = TftColors.matchedChampion, fontSize = 12.sp)
                     for (item in recommendation.craftableCarryItems) {
                         ItemIcon(apiName = item, modifier = Modifier.height(18.dp))
                     }

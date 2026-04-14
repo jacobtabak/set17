@@ -1,25 +1,23 @@
 package dev.set17.tftacademy.integration
 
 import dev.set17.tftacademy.db.DbMapper
-import dev.set17.tftacademy.db.TftAcademyDatabase
+import dev.set17.tftacademy.db.DriverFactory
+import dev.set17.tftacademy.db.createDatabase
 import dev.set17.tftacademy.item.ItemComponentMap
 import dev.set17.tftacademy.model.Difficulty
 import dev.set17.tftacademy.model.Tier
 import dev.set17.tftacademy.parser.SvelteKitDataParser
-import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
+import kotlinx.coroutines.test.runTest
 import kotlin.test.*
 
 class FullRoundTripTest {
 
-    private lateinit var database: TftAcademyDatabase
     private lateinit var dbMapper: DbMapper
     private val parser = SvelteKitDataParser()
 
     @BeforeTest
-    fun setup() {
-        val driver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
-        TftAcademyDatabase.Schema.create(driver)
-        database = TftAcademyDatabase(driver)
+    fun setup() = runTest {
+        val database = createDatabase(DriverFactory())
         dbMapper = DbMapper(database)
 
         val json = this::class.java.getResource("/raw_data_sample.json")!!.readText()
@@ -29,13 +27,13 @@ class FullRoundTripTest {
     }
 
     @Test
-    fun `stores and retrieves all comps`() {
+    fun `stores and retrieves all comps`() = runTest {
         val all = dbMapper.readAllSummaries()
         assertTrue(all.size >= 40, "Expected at least 40 comps, got ${all.size}")
     }
 
     @Test
-    fun `comps are ordered by tier`() {
+    fun `comps are ordered by tier`() = runTest {
         val all = dbMapper.readAllSummaries()
         val tierOrder = all.map { it.tier }
         val sIndex = tierOrder.indexOfFirst { it == Tier.S }
@@ -44,7 +42,7 @@ class FullRoundTripTest {
     }
 
     @Test
-    fun `reads full comp with all children`() {
+    fun `reads full comp with all children`() = runTest {
         val comp = dbMapper.readFullComp("set-17-vex-9-5")
         assertNotNull(comp)
         assertEquals("Vex 9-5", comp.title)
@@ -60,34 +58,34 @@ class FullRoundTripTest {
     }
 
     @Test
-    fun `queries by tier`() {
+    fun `queries by tier`() = runTest {
         val sTier = dbMapper.readSummariesByTier("S")
         assertTrue(sTier.isNotEmpty())
         assertTrue(sTier.all { it.tier == Tier.S })
     }
 
     @Test
-    fun `queries by difficulty`() {
+    fun `queries by difficulty`() = runTest {
         val easy = dbMapper.readSummariesByDifficulty("EASY")
         assertTrue(easy.isNotEmpty())
         assertTrue(easy.all { it.difficulty == Difficulty.EASY })
     }
 
     @Test
-    fun `queries by champion`() {
+    fun `queries by champion`() = runTest {
         val vexComps = dbMapper.readSummariesByChampion("TFT17_Vex")
         assertTrue(vexComps.isNotEmpty(), "Vex should appear in at least one comp")
         assertTrue(vexComps.any { it.compSlug == "set-17-vex-9-5" })
     }
 
     @Test
-    fun `queries by item`() {
+    fun `queries by item`() = runTest {
         val guinsooComps = dbMapper.readSummariesByItem("TFT_Item_GuinsoosRageblade")
         assertTrue(guinsooComps.isNotEmpty(), "Guinsoo's should appear in at least one comp")
     }
 
     @Test
-    fun `queries by base component`() {
+    fun `queries by base component`() = runTest {
         val bfSwordComps = dbMapper.readSummariesByComponent("TFT_Item_BFSword")
         assertTrue(bfSwordComps.isNotEmpty(), "BF Sword should be needed by at least one comp")
 
@@ -96,7 +94,7 @@ class FullRoundTripTest {
     }
 
     @Test
-    fun `maxcap champions have predecessors`() {
+    fun `maxcap champions have predecessors`() = runTest {
         val nova = dbMapper.readFullComp("set-17-nova-yi")
         assertNotNull(nova)
         assertTrue(nova.maxCap.isNotEmpty(), "NOVA should have maxCap entries")
@@ -105,7 +103,7 @@ class FullRoundTripTest {
     }
 
     @Test
-    fun `refresh replaces old data`() {
+    fun `refresh replaces old data`() = runTest {
         val countBefore = dbMapper.compCount()
         val json = this::class.java.getResource("/raw_data_sample.json")!!.readText()
         val comps = parser.parse(json)
@@ -115,7 +113,7 @@ class FullRoundTripTest {
     }
 
     @Test
-    fun `queries by style`() {
+    fun `queries by style`() = runTest {
         val fast8 = dbMapper.readSummariesByStyle("4-Cost Fast 8")
         assertTrue(fast8.isNotEmpty(), "Should have Fast 8 comps")
         assertTrue(fast8.all { it.style == "4-Cost Fast 8" })

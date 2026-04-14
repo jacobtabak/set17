@@ -6,8 +6,6 @@ import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 actual class DriverFactory(private val dbPath: String? = null) {
     actual fun createDriver(): SqlDriver {
         val url = if (dbPath != null) "jdbc:sqlite:$dbPath" else JdbcSqliteDriver.IN_MEMORY
-        return JdbcSqliteDriver(url).also {
-            TftAcademyDatabase.Schema.create(it)
-        }
+        return JdbcSqliteDriver(url)
     }
 }

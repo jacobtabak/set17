@@ -3,6 +3,7 @@ package dev.set17.tftacademy.api
 import dev.set17.tftacademy.db.DbMapper
 import dev.set17.tftacademy.db.DriverFactory
 import dev.set17.tftacademy.db.TftAcademyDatabase
+import dev.set17.tftacademy.db.createDatabase
 import dev.set17.tftacademy.item.ItemComponentMap
 import dev.set17.tftacademy.model.*
 import dev.set17.tftacademy.network.TftAcademyClient
@@ -10,46 +11,53 @@ import dev.set17.tftacademy.parser.SvelteKitDataParser
 
 class TftAcademyRepository(
     private val client: TftAcademyClient,
-    driverFactory: DriverFactory,
+    private val driverFactory: DriverFactory,
 ) {
     private val parser = SvelteKitDataParser()
-    private val database = TftAcademyDatabase(driverFactory.createDriver())
-    private val dbMapper = DbMapper(database)
+    private var database: TftAcademyDatabase? = null
+    private var _dbMapper: DbMapper? = null
 
-    /** Fetch latest data from TFT Academy, parse, and store in the local database. */
+    private suspend fun db(): DbMapper {
+        if (_dbMapper == null) {
+            database = createDatabase(driverFactory)
+            _dbMapper = DbMapper(database!!)
+        }
+        return _dbMapper!!
+    }
+
     suspend fun refresh(set: Int = 17): Int {
         val rawJson = client.fetchTierListData(set)
         val comps = parser.parse(rawJson)
-        dbMapper.replaceAll(comps)
-        dbMapper.seedItemRecipes(ItemComponentMap.recipes)
+        db().replaceAll(comps)
+        db().seedItemRecipes(ItemComponentMap.recipes)
         return comps.size
     }
 
-    fun hasData(): Boolean = dbMapper.compCount() > 0
+    suspend fun hasData(): Boolean = db().compCount() > 0
 
-    fun getAllComps(): List<CompSummary> = dbMapper.readAllSummaries()
+    suspend fun getAllComps(): List<CompSummary> = db().readAllSummaries()
 
-    fun getComp(compSlug: String): Comp? = dbMapper.readFullComp(compSlug)
+    suspend fun getComp(compSlug: String): Comp? = db().readFullComp(compSlug)
 
-    fun getCompsByTier(tier: Tier): List<CompSummary> = dbMapper.readSummariesByTier(tier.name)
+    suspend fun getCompsByTier(tier: Tier): List<CompSummary> = db().readSummariesByTier(tier.name)
 
-    fun getCompsByDifficulty(difficulty: Difficulty): List<CompSummary> =
-        dbMapper.readSummariesByDifficulty(difficulty.name)
+    suspend fun getCompsByDifficulty(difficulty: Difficulty): List<CompSummary> =
+        db().readSummariesByDifficulty(difficulty.name)
 
-    fun getCompsByStyle(style: String): List<CompSummary> = dbMapper.readSummariesByStyle(style)
+    suspend fun getCompsByStyle(style: String): List<CompSummary> = db().readSummariesByStyle(style)
 
-    fun getCompsForChampion(apiName: String): List<CompSummary> =
-        dbMapper.readSummariesByChampion(apiName)
+    suspend fun getCompsForChampion(apiName: String): List<CompSummary> =
+        db().readSummariesByChampion(apiName)
 
-    fun getCompsForItem(itemApiName: String): List<CompSummary> =
-        dbMapper.readSummariesByItem(itemApiName)
+    suspend fun getCompsForItem(itemApiName: String): List<CompSummary> =
+        db().readSummariesByItem(itemApiName)
 
-    fun getCompsForComponent(componentApiName: String): List<CompSummary> =
-        dbMapper.readSummariesByComponent(componentApiName)
+    suspend fun getCompsForComponent(componentApiName: String): List<CompSummary> =
+        db().readSummariesByComponent(componentApiName)
 
-    fun getCompsForChampionInRole(apiName: String, role: String): List<CompSummary> =
-        dbMapper.readSummariesByChampionAndRole(apiName, role)
+    suspend fun getCompsForChampionInRole(apiName: String, role: String): List<CompSummary> =
+        db().readSummariesByChampionAndRole(apiName, role)
 
-    fun getChampionNamesForRole(role: String): List<String> =
-        dbMapper.readDistinctChampionNamesByRole(role)
+    suspend fun getChampionNamesForRole(role: String): List<String> =
+        db().readDistinctChampionNamesByRole(role)
 }

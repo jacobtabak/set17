@@ -14,6 +14,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import dev.set17.tftacademy.champion.ChampionData
 import dev.set17.tftacademy.model.Comp
 
@@ -21,7 +26,7 @@ import dev.set17.tftacademy.model.Comp
 fun CompDetailPanel(
     comp: Comp,
     onBack: (() -> Unit)? = null,
-    backLabel: String = "\u2190 Back",
+    useCloseIcon: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -29,15 +34,16 @@ fun CompDetailPanel(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         if (onBack != null) {
-            val align = if (backLabel == "\u2715") Modifier.fillMaxWidth() else Modifier
-            Text(
-                text = backLabel,
-                color = TftColors.chipSelectedBorder,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium,
-                textAlign = if (backLabel == "\u2715") androidx.compose.ui.text.style.TextAlign.End else null,
-                modifier = align.clickable(onClick = onBack).padding(bottom = 4.dp),
-            )
+            val alignment = if (useCloseIcon) Alignment.CenterEnd else Alignment.CenterStart
+            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = alignment) {
+                IconButton(onClick = onBack) {
+                    Icon(
+                        imageVector = if (useCloseIcon) Icons.Filled.Close else Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = if (useCloseIcon) "Close" else "Back",
+                        tint = TftColors.chipSelectedBorder,
+                    )
+                }
+            }
         }
         // Header
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

@@ -3,6 +3,7 @@ package dev.set17.earlygame.ui
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Surface
@@ -18,7 +19,7 @@ private const val MAX_COUNT = 3
 
 @Composable
 fun ComponentChip(
-    name: String,
+    apiName: String,
     count: Int,
     onIncrement: () -> Unit,
     onDecrement: () -> Unit,
@@ -27,16 +28,15 @@ fun ComponentChip(
     val selected = count > 0
     val bg = if (selected) TftColors.chipSelected else TftColors.chipDefault
     val border = if (selected) TftColors.chipSelectedBorder else TftColors.chipDefaultBorder
-    val textColor = if (selected) TftColors.textPrimary else TftColors.textSecondary
 
     Surface(
-        modifier = modifier,
+        modifier = modifier.clickable(onClick = if (selected) onDecrement else onIncrement),
         shape = RoundedCornerShape(6.dp),
         color = bg,
         border = BorderStroke(1.dp, border),
     ) {
         Row(
-            modifier = Modifier.padding(vertical = 6.dp),
+            modifier = Modifier.padding(vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
@@ -45,19 +45,15 @@ fun ComponentChip(
                 fontSize = 16.sp,
                 modifier = Modifier
                     .clickable(enabled = selected, onClick = onDecrement)
-                    .padding(horizontal = 10.dp),
+                    .padding(horizontal = 8.dp),
             )
-            Text(
-                text = name,
-                color = textColor,
-                fontSize = 13.sp,
-            )
+            ItemIcon(apiName = apiName, modifier = Modifier.height(24.dp))
             Text(
                 text = "\u00d7$count",
                 color = if (selected) TftColors.chipSelectedBorder else TftColors.textMuted,
                 fontSize = 11.sp,
                 fontFamily = FontFamily.Monospace,
-                modifier = Modifier.padding(start = 2.dp),
+                modifier = Modifier.padding(start = 4.dp),
             )
             Text(
                 text = "+",
@@ -65,7 +61,7 @@ fun ComponentChip(
                 fontSize = 16.sp,
                 modifier = Modifier
                     .clickable(enabled = count < MAX_COUNT, onClick = onIncrement)
-                    .padding(horizontal = 10.dp),
+                    .padding(horizontal = 8.dp),
             )
         }
     }

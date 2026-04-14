@@ -25,7 +25,7 @@ fun ChampionSelectorGrid(
     } else {
         val query = filter.lowercase()
         ChampionData.champions.keys.filter {
-            it.removePrefix("TFT17_").removePrefix("TFT_").lowercase().contains(query)
+            ChampionData.displayName(it).lowercase().contains(query)
         }
     }
 
@@ -40,7 +40,7 @@ fun ChampionSelectorGrid(
             val score = championScores[champ] ?: 0
             val cost = ChampionData.champions[champ]?.cost ?: 1
             ChampionChip(
-                name = champ.removePrefix("TFT17_").removePrefix("TFT_"),
+                name = ChampionData.displayName(champ),
                 selected = champ in selectedChampions,
                 score = score,
                 costColor = TftColors.costColor(cost),

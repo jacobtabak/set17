@@ -7,6 +7,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import coil3.compose.AsyncImage
+import dev.set17.tftacademy.item.ItemComponentMap
 
 @Composable
 fun ItemIcon(
@@ -15,9 +16,7 @@ fun ItemIcon(
 ) {
     AsyncImage(
         model = "https://assets.tftacademy.com/items/$apiName.webp",
-        contentDescription = apiName
-            .removePrefix("TFT_Item_")
-            .removePrefix("TFT17_Item_"),
+        contentDescription = ItemComponentMap.displayName(apiName),
         modifier = modifier.aspectRatio(1f).clip(RoundedCornerShape(4.dp)),
     )
 }

@@ -143,9 +143,72 @@ object ItemComponentMap {
         "TFT_Item_IonicSpark",
     )
 
+    /** Current in-game display names. Source: Community Dragon. */
+    val displayNames: Map<String, String> = mapOf(
+        // Base components
+        "TFT_Item_BFSword" to "B.F. Sword",
+        "TFT_Item_RecurveBow" to "Recurve Bow",
+        "TFT_Item_NeedlesslyLargeRod" to "Needlessly Large Rod",
+        "TFT_Item_TearOfTheGoddess" to "Tear of the Goddess",
+        "TFT_Item_ChainVest" to "Chain Vest",
+        "TFT_Item_NegatronCloak" to "Negatron Cloak",
+        "TFT_Item_GiantsBelt" to "Giant's Belt",
+        "TFT_Item_SparringGloves" to "Sparring Gloves",
+        "TFT_Item_FryingPan" to "Frying Pan",
+        "TFT_Item_Spatula" to "Spatula",
+        // Completed items (many renamed from their API names)
+        "TFT_Item_ArchangelsStaff" to "Archangel's Staff",
+        "TFT_Item_Bloodthirster" to "Bloodthirster",
+        "TFT_Item_BlueBuff" to "Blue Buff",
+        "TFT_Item_BrambleVest" to "Bramble Vest",
+        "TFT_Item_Crownguard" to "Crownguard",
+        "TFT_Item_Deathblade" to "Deathblade",
+        "TFT_Item_DragonsClaw" to "Dragon's Claw",
+        "TFT_Item_FrozenHeart" to "Protector's Vow",
+        "TFT_Item_GargoyleStoneplate" to "Gargoyle Stoneplate",
+        "TFT_Item_GuardianAngel" to "Edge of Night",
+        "TFT_Item_GuinsoosRageblade" to "Guinsoo's Rageblade",
+        "TFT_Item_HextechGunblade" to "Hextech Gunblade",
+        "TFT_Item_InfinityEdge" to "Infinity Edge",
+        "TFT_Item_IonicSpark" to "Ionic Spark",
+        "TFT_Item_JeweledGauntlet" to "Jeweled Gauntlet",
+        "TFT_Item_LastWhisper" to "Last Whisper",
+        "TFT_Item_Leviathan" to "Nashor's Tooth",
+        "TFT_Item_MadredsBloodrazor" to "Giant Slayer",
+        "TFT_Item_Morellonomicon" to "Morellonomicon",
+        "TFT_Item_NightHarvester" to "Steadfast Heart",
+        "TFT_Item_PowerGauntlet" to "Striker's Flail",
+        "TFT_Item_Quicksilver" to "Quicksilver",
+        "TFT_Item_RabadonsDeathcap" to "Rabadon's Deathcap",
+        "TFT_Item_RapidFireCannon" to "Red Buff",
+        "TFT_Item_RedBuff" to "Sunfire Cape",
+        "TFT_Item_Redemption" to "Spirit Visage",
+        "TFT_Item_RunaansHurricane" to "Kraken's Fury",
+        "TFT_Item_SpearOfShojin" to "Spear of Shojin",
+        "TFT_Item_SpectralGauntlet" to "Evenshroud",
+        "TFT_Item_StatikkShiv" to "Void Staff",
+        "TFT_Item_SteraksGage" to "Sterak's Gage",
+        "TFT_Item_ThiefsGloves" to "Thief's Gloves",
+        "TFT_Item_TitansResolve" to "Titan's Resolve",
+        "TFT_Item_UnstableConcoction" to "Hand of Justice",
+        "TFT_Item_WarmogsArmor" to "Warmog's Armor",
+        "TFT_Item_AdaptiveHelm" to "Adaptive Helm",
+    )
+
+    /** Get display name for any item API name. Falls back to formatted API name. */
+    fun displayName(apiName: String): String {
+        displayNames[apiName]?.let { return it }
+        // Emblem items
+        emblemApiNameToTrait[apiName]?.let { return "$it Emblem" }
+        // Fallback: strip prefix and insert spaces
+        return apiName
+            .removePrefix("TFT_Item_")
+            .removePrefix("TFT17_Item_")
+            .replace(Regex("([a-z])([A-Z])"), "$1 $2")
+    }
+
     fun componentsOf(completedItem: String): Pair<String, String>? {
         recipes[completedItem]?.let { return it }
-        // Check if it's an emblem
         val trait = emblemApiNameToTrait[completedItem] ?: return null
         return emblemRecipes[trait]
     }

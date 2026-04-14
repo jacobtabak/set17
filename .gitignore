@@ -4,3 +4,5 @@ build/
 .idea/
 .kotlin/
 local.properties
+kotlin-js-store/
+*.db

@@ -71,6 +71,7 @@ kotlin {
         val wasmJsMain by getting {
             dependencies {
                 implementation(libs.ktor.client.js)
+                implementation(npm("copy-webpack-plugin", "12.0.2"))
             }
         }
         val iosX64Main by getting

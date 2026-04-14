@@ -1,6 +1,7 @@
 package dev.set17.earlygame
 
 import dev.set17.earlygame.model.CompRecommendation
+import dev.set17.earlygame.model.GamePhase
 import dev.set17.tftacademy.api.TftAcademyRepository
 import dev.set17.tftacademy.item.ItemComponentMap
 import dev.set17.tftacademy.champion.ChampionData
@@ -16,7 +17,7 @@ class EarlyGameEngine(
     private var scoringComps: List<Comp> = emptyList()
     private var earlyChampionNames: List<String> = emptyList()
 
-    fun init() {
+    suspend fun init() {
         earlyChampionNames = repo.getChampionNamesForRole("early")
             .filter { it in ChampionData.champions }
         val allSummaries = repo.getAllComps()
@@ -26,7 +27,6 @@ class EarlyGameEngine(
         unknownEmblems = findUnknownEmblems()
     }
 
-    /** Emblem item API names found in comp data that we don't have recipes for. */
     var unknownEmblems: List<String> = emptyList()
         private set
 
@@ -53,6 +53,7 @@ class EarlyGameEngine(
 
     fun getEarlyChampionPool(): List<String> = earlyChampionNames
 
+    /** Flex scores for early game champions (how many S/A/B comps use them in earlyComp). */
     fun scoreChampions(): Map<String, Int> {
         val scores = mutableMapOf<String, Int>()
         for (comp in scoringComps) {
@@ -64,11 +65,38 @@ class EarlyGameEngine(
         return scores
     }
 
+    /** Flex scores for late game champions (how many S/A/B comps use them in finalComp). */
+    fun scoreLateChampions(): Map<String, Int> {
+        val scores = mutableMapOf<String, Int>()
+        for (comp in scoringComps) {
+            val weight = tierWeight(comp.tier)
+            for (champ in comp.finalComp) {
+                if (champ.apiName in ChampionData.champions) {
+                    scores[champ.apiName] = (scores[champ.apiName] ?: 0) + weight
+                }
+            }
+        }
+        return scores
+    }
+
+    /** Flex scores for completed items (how many S/A/B comps use them on any champion). */
+    fun scoreItems(): Map<String, Int> {
+        val scores = mutableMapOf<String, Int>()
+        for (comp in scoringComps) {
+            val weight = tierWeight(comp.tier)
+            for (champ in comp.finalComp) {
+                for (item in champ.items) {
+                    scores[item] = (scores[item] ?: 0) + weight
+                }
+            }
+        }
+        return scores
+    }
+
     fun scoreComponents(): Map<String, Int> {
         val scores = mutableMapOf<String, Int>()
         for (comp in scoringComps) {
             val weight = tierWeight(comp.tier)
-            // Score all craftable items across all champions in the comp
             for (champ in comp.finalComp) {
                 for (item in champ.items) {
                     val recipe = ItemComponentMap.componentsOf(item) ?: continue
@@ -85,29 +113,84 @@ class EarlyGameEngine(
     fun recommend(
         selectedChampions: Set<String>,
         componentCounts: Map<String, Int> = emptyMap(),
+        fullItemCounts: Map<String, Int> = emptyMap(),
+        phase: GamePhase = GamePhase.EARLY,
     ): List<CompRecommendation> {
-        if (selectedChampions.isEmpty() && componentCounts.isEmpty()) return emptyList()
+        if (selectedChampions.isEmpty() && componentCounts.isEmpty() && fullItemCounts.isEmpty()) {
+            return emptyList()
+        }
 
         return recommendableComps.mapNotNull { comp ->
             val tw = tierWeight(comp.tier)
-            val earlyNames = comp.earlyComp.map { it.apiName }.toSet()
-            val matched = selectedChampions.intersect(earlyNames).toList().sorted()
-            val missing = (earlyNames - selectedChampions).toList().sorted()
+
+            // Champion matching — source depends on phase
+            val compChampNames = when (phase) {
+                GamePhase.EARLY -> comp.earlyComp.map { it.apiName }.toSet()
+                GamePhase.LATE -> comp.finalComp
+                    .filter { it.apiName in ChampionData.champions }
+                    .map { it.apiName }.toSet()
+            }
+            val matched = selectedChampions.intersect(compChampNames).toList().sorted()
+            val missing = (compChampNames - selectedChampions).toList().sorted()
             val championScore = matched.size * config.championMatchWeight * tw
 
             val craftable = mutableListOf<String>()
             val partial = mutableListOf<String>()
             var itemScore = 0
 
+            // Collect all comp items by role
+            val carryItemList = carryItems(comp)
+            val tank = findTank(comp)
+            val tankItems = tank?.items?.filter { ItemComponentMap.componentsOf(it) != null } ?: emptyList()
+            val (emblemItems, supportItems) = findSupportItems(comp, tank)
+            val allCompItems = carryItemList + emblemItems + tankItems + supportItems
+
+            // Phase 0: full item direct matches (user already has completed items)
+            val itemPool = fullItemCounts.toMutableMap()
+            if (itemPool.isNotEmpty()) {
+                fun consumeItem(item: String): Boolean {
+                    val c = itemPool[item] ?: return false
+                    if (c <= 1) itemPool.remove(item) else itemPool[item] = c - 1
+                    return true
+                }
+                // Check carry items first
+                for ((i, item) in carryItemList.withIndex()) {
+                    if (consumeItem(item)) {
+                        craftable.add(item)
+                        val w = if (i < 2) config.carryItemWeight else config.carryItem3Weight
+                        itemScore += w * tw
+                    }
+                }
+                // Emblems
+                for (item in emblemItems) {
+                    if (consumeItem(item)) {
+                        craftable.add(item)
+                        itemScore += config.emblemItemWeight * tw
+                    }
+                }
+                // Tank
+                for (item in tankItems) {
+                    if (consumeItem(item)) {
+                        craftable.add(item)
+                        itemScore += config.tankItemWeight * tw
+                    }
+                }
+                // Support
+                for (item in supportItems) {
+                    if (consumeItem(item)) {
+                        craftable.add(item)
+                        itemScore += config.supportItemWeight * tw
+                    }
+                }
+            }
+
+            // Component-based crafting (phases 1-9)
             if (componentCounts.isNotEmpty()) {
                 val pool = componentCounts.toMutableMap()
-                val items = carryItems(comp)
-                val tank = findTank(comp)
-                val tankItems = tank?.items?.filter { ItemComponentMap.componentsOf(it) != null } ?: emptyList()
-                val (emblemItems, supportItems) = findSupportItems(comp, tank)
 
-                // Phase 1: carry full matches (priority ordered — items 1&2 then 3)
-                for ((i, item) in items.withIndex()) {
+                // Phase 1: carry full
+                for ((i, item) in carryItemList.withIndex()) {
+                    if (item in craftable) continue
                     if (canCraftFull(item, pool)) {
                         craftable.add(item)
                         consumeRecipe(item, pool)
@@ -115,36 +198,35 @@ class EarlyGameEngine(
                         itemScore += w * tw
                     }
                 }
-
-                // Phase 2: emblem full matches
+                // Phase 2: emblem full
                 for (item in emblemItems) {
+                    if (item in craftable) continue
                     if (canCraftFull(item, pool)) {
                         craftable.add(item)
                         consumeRecipe(item, pool)
                         itemScore += config.emblemItemWeight * tw
                     }
                 }
-
-                // Phase 3: tank full matches
+                // Phase 3: tank full
                 for (item in tankItems) {
+                    if (item in craftable) continue
                     if (canCraftFull(item, pool)) {
                         craftable.add(item)
                         consumeRecipe(item, pool)
                         itemScore += config.tankItemWeight * tw
                     }
                 }
-
-                // Phase 4: support full matches
+                // Phase 4: support full
                 for (item in supportItems) {
+                    if (item in craftable) continue
                     if (canCraftFull(item, pool)) {
                         craftable.add(item)
                         consumeRecipe(item, pool)
                         itemScore += config.supportItemWeight * tw
                     }
                 }
-
-                // Phase 5: carry partial matches
-                for ((i, item) in items.withIndex()) {
+                // Phase 5: carry partial
+                for ((i, item) in carryItemList.withIndex()) {
                     if (item in craftable) continue
                     val component = findPartialComponent(item, pool)
                     if (component != null) {
@@ -154,8 +236,7 @@ class EarlyGameEngine(
                         itemScore += w * tw
                     }
                 }
-
-                // Phase 6: emblem partial matches
+                // Phase 6: emblem partial
                 for (item in emblemItems) {
                     if (item in craftable) continue
                     val component = findPartialComponent(item, pool)
@@ -165,8 +246,7 @@ class EarlyGameEngine(
                         itemScore += config.emblemPartialWeight * tw
                     }
                 }
-
-                // Phase 7: tank partial matches
+                // Phase 7: tank partial
                 for (item in tankItems) {
                     if (item in craftable) continue
                     val component = findPartialComponent(item, pool)
@@ -176,8 +256,7 @@ class EarlyGameEngine(
                         itemScore += config.tankPartialWeight * tw
                     }
                 }
-
-                // Phase 8: support partial matches
+                // Phase 8: support partial
                 for (item in supportItems) {
                     if (item in craftable) continue
                     val component = findPartialComponent(item, pool)
@@ -187,8 +266,7 @@ class EarlyGameEngine(
                         itemScore += config.supportPartialWeight * tw
                     }
                 }
-
-                // Phase 9: carousel matches
+                // Phase 9: carousel
                 for (entry in comp.carousel) {
                     if ((pool[entry] ?: 0) > 0) {
                         decrement(pool, entry)
@@ -212,7 +290,6 @@ class EarlyGameEngine(
         }.sortedWith(compareByDescending<CompRecommendation> { it.score }.thenBy { it.comp.title })
     }
 
-    /** All S/A/B comps as recommendations with no match data, sorted by tier. */
     fun allComps(): List<CompRecommendation> {
         return recommendableComps.map { comp ->
             CompRecommendation(
@@ -224,7 +301,7 @@ class EarlyGameEngine(
         }.sortedWith(compareBy<CompRecommendation> { it.comp.tier.ordinal }.thenBy { it.comp.title })
     }
 
-    fun getFullComp(slug: String): Comp? = repo.getComp(slug)
+    suspend fun getFullComp(slug: String): Comp? = repo.getComp(slug)
 
     private fun carryItems(comp: Comp): List<String> {
         val carryApiName = comp.mainChampion.apiName
@@ -235,7 +312,6 @@ class EarlyGameEngine(
             ?: emptyList()
     }
 
-    /** Find the tank: non-carry champion with the most defensive items (minimum 2). */
     private fun findTank(comp: Comp): Champion? {
         val carryApiName = comp.mainChampion.apiName
         return comp.finalComp
@@ -244,7 +320,6 @@ class EarlyGameEngine(
             ?.takeIf { champ -> champ.items.count { ItemComponentMap.isDefensiveItem(it) } >= 2 }
     }
 
-    /** Collect craftable items from non-carry, non-tank champions, split into emblems and other. */
     private fun findSupportItems(comp: Comp, tank: Champion?): Pair<List<String>, List<String>> {
         val carryApiName = comp.mainChampion.apiName
         val tankApiName = tank?.apiName

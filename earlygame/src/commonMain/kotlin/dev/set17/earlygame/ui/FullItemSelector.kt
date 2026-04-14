@@ -8,29 +8,20 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import dev.set17.tftacademy.item.ItemComponentMap
 
-private val DISPLAY_COMPONENTS = listOf(
-    "TFT_Item_BFSword",
-    "TFT_Item_RecurveBow",
-    "TFT_Item_NeedlesslyLargeRod",
-    "TFT_Item_TearOfTheGoddess",
-    "TFT_Item_ChainVest",
-    "TFT_Item_NegatronCloak",
-    "TFT_Item_GiantsBelt",
-    "TFT_Item_SparringGloves",
-    "TFT_Item_FryingPan",
-    "TFT_Item_Spatula",
-)
+private val ALL_ITEMS: List<String> by lazy {
+    ItemComponentMap.recipes.keys.toList()
+}
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun ComponentSelectorRow(
-    componentCounts: Map<String, Int>,
-    componentScores: Map<String, Int>,
+fun FullItemSelector(
+    itemCounts: Map<String, Int>,
+    itemScores: Map<String, Int>,
     onIncrement: (String) -> Unit,
     onDecrement: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val sorted = DISPLAY_COMPONENTS.sortedByDescending { componentScores[it] ?: 0 }
+    val sorted = ALL_ITEMS.sortedByDescending { itemScores[it] ?: 0 }
 
     FlowRow(
         modifier = modifier,
@@ -40,7 +31,7 @@ fun ComponentSelectorRow(
         for (apiName in sorted) {
             ComponentChip(
                 apiName = apiName,
-                count = componentCounts[apiName] ?: 0,
+                count = itemCounts[apiName] ?: 0,
                 onIncrement = { onIncrement(apiName) },
                 onDecrement = { onDecrement(apiName) },
             )

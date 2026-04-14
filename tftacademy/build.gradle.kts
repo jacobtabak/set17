@@ -21,6 +21,7 @@ sqldelight {
     databases {
         create("TftAcademyDatabase") {
             packageName.set("dev.set17.tftacademy.db")
+            generateAsync.set(true)
         }
     }
 }
@@ -54,6 +55,7 @@ kotlin {
             implementation(libs.kotlinx.coroutines.core)
             implementation(libs.sqldelight.runtime)
             implementation(libs.sqldelight.coroutines)
+            implementation(libs.sqldelight.async)
         }
         jvmMain.dependencies {
             implementation(libs.ktor.client.cio)
@@ -62,11 +64,14 @@ kotlin {
         androidMain.dependencies {
             implementation(libs.ktor.client.android)
             implementation(libs.sqldelight.driver.android)
+            implementation(libs.androidx.sqlite.framework)
         }
         val wasmJsMain by getting {
             dependencies {
                 implementation(libs.ktor.client.js)
                 implementation(libs.sqldelight.driver.web)
+                implementation(npm("@cashapp/sqldelight-sqljs-worker", "2.3.2"))
+                implementation(npm("sql.js", "1.11.0"))
             }
         }
         val iosX64Main by getting
