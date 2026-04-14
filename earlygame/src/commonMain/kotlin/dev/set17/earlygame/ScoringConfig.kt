@@ -26,6 +26,18 @@ data class ScoringConfig(
     /** Tank item — partially craftable. */
     val tankPartialWeight: Int = 1,
 
+    /** Emblem item — fully craftable. Emblems are often build-defining (e.g. DRX for NOVA). */
+    val emblemItemWeight: Int = 7,
+
+    /** Emblem item — partially craftable. */
+    val emblemPartialWeight: Int = 2,
+
+    /** Support item — fully craftable. Non-emblem items on non-carry, non-tank champions. */
+    val supportItemWeight: Int = 4,
+
+    /** Support item — partially craftable. */
+    val supportPartialWeight: Int = 1,
+
     /** Carousel priority component match. Weakest item signal. */
     val carouselMatchWeight: Int = 1,
 

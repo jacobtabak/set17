@@ -58,6 +58,7 @@ fun EarlyGameScreen(
                 championScores = engine.scoreChampions(),
                 componentScores = engine.scoreComponents(),
                 allComps = engine.allComps(),
+                unknownEmblems = engine.unknownEmblems,
             )
         } catch (e: Exception) {
             state = state.copy(loading = false, error = e.message)
@@ -245,6 +246,13 @@ private fun ListColumn(
         modifier = modifier.padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
+        if (state.unknownEmblems.isNotEmpty()) {
+            Text(
+                text = "Unknown emblems in data: ${state.unknownEmblems.joinToString { it.substringAfterLast("_") }}. Item scoring may be incomplete.",
+                color = TftColors.missingChampion,
+                fontSize = 11.sp,
+            )
+        }
         Text(
             text = "EARLY GAME CHAMPIONS",
             color = TftColors.textMuted,

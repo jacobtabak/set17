@@ -17,4 +17,5 @@ data class EarlyGameState(
     val componentCounts: Map<String, Int> = emptyMap(),
     val componentScores: Map<String, Int> = emptyMap(),
     val allComps: List<CompRecommendation> = emptyList(),
+    val unknownEmblems: List<String> = emptyList(),
 )

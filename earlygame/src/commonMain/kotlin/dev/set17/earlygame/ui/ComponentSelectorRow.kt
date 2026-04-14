@@ -16,6 +16,8 @@ private val DISPLAY_COMPONENTS = listOf(
     "TFT_Item_NegatronCloak" to "Cloak",
     "TFT_Item_GiantsBelt" to "Belt",
     "TFT_Item_SparringGloves" to "Gloves",
+    "TFT_Item_FryingPan" to "Pan",
+    "TFT_Item_Spatula" to "Spatula",
 )
 
 @OptIn(ExperimentalLayoutApi::class)

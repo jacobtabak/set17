@@ -70,6 +70,50 @@ object ItemComponentMap {
         "TFT_Item_ThiefsGloves" to ("TFT_Item_SparringGloves" to "TFT_Item_SparringGloves"),
     )
 
+    /**
+     * Emblem recipes keyed by trait name. Each trait's emblem is crafted from
+     * either a Frying Pan or Spatula plus a base component.
+     *
+     * Not all traits have craftable emblems — unique/rare trait emblems
+     * can only be found through augments or other mechanics.
+     */
+    val emblemRecipes: Map<String, Pair<String, String>> = mapOf(
+        // Frying Pan emblems
+        "Challenger" to ("TFT_Item_FryingPan" to "TFT_Item_RecurveBow"),
+        "Vanguard" to ("TFT_Item_FryingPan" to "TFT_Item_NegatronCloak"),
+        "Brawler" to ("TFT_Item_FryingPan" to "TFT_Item_GiantsBelt"),
+        "Rogue" to ("TFT_Item_FryingPan" to "TFT_Item_SparringGloves"),
+        "Shepherd" to ("TFT_Item_FryingPan" to "TFT_Item_TearOfTheGoddess"),
+        "Voyager" to ("TFT_Item_FryingPan" to "TFT_Item_NeedlesslyLargeRod"),
+        "Marauder" to ("TFT_Item_FryingPan" to "TFT_Item_BFSword"),
+        "Bastion" to ("TFT_Item_FryingPan" to "TFT_Item_ChainVest"),
+        // Spatula emblems
+        "Arbiter" to ("TFT_Item_Spatula" to "TFT_Item_NegatronCloak"),
+        "N.O.V.A." to ("TFT_Item_Spatula" to "TFT_Item_SparringGloves"),
+        "Primordian" to ("TFT_Item_Spatula" to "TFT_Item_GiantsBelt"),
+        "Dark Star" to ("TFT_Item_Spatula" to "TFT_Item_BFSword"),
+        "Meeple" to ("TFT_Item_Spatula" to "TFT_Item_ChainVest"),
+        "Stargazer" to ("TFT_Item_Spatula" to "TFT_Item_NeedlesslyLargeRod"),
+        "Timebreaker" to ("TFT_Item_Spatula" to "TFT_Item_RecurveBow"),
+        "Space Groove" to ("TFT_Item_Spatula" to "TFT_Item_TearOfTheGoddess"),
+    )
+
+    /**
+     * Maps emblem item API names (as used by TFT Academy) to their trait name.
+     * This allows looking up the recipe for an emblem item via [emblemRecipes].
+     * Add new mappings here when TFT Academy data uses a new emblem API name.
+     */
+    val emblemApiNameToTrait: Map<String, String> = mapOf(
+        "TFT17_Item_AssassinTraitEmblemItem" to "Rogue",
+        "TFT17_Item_DRXEmblemItem" to "N.O.V.A.",
+        "TFT17_Item_DarkStarEmblemItem" to "Dark Star",
+        "TFT17_Item_PsyOpsEmblemItem" to "Psionic",
+        "TFT17_Item_ShieldTankEmblemItem" to "Bastion",
+        "TFT17_Item_SpaceGrooveEmblemItem" to "Space Groove",
+        "TFT17_Item_StargazerEmblemItem" to "Stargazer",
+        "TFT17_Item_SummonTraitEmblemItem" to "Shepherd",
+    )
+
     /** Reverse lookup: component -> list of completed items that use it. */
     val completedItemsByComponent: Map<String, List<String>> by lazy {
         val result = mutableMapOf<String, MutableList<String>>()
@@ -99,7 +143,12 @@ object ItemComponentMap {
         "TFT_Item_IonicSpark",
     )
 
-    fun componentsOf(completedItem: String): Pair<String, String>? = recipes[completedItem]
+    fun componentsOf(completedItem: String): Pair<String, String>? {
+        recipes[completedItem]?.let { return it }
+        // Check if it's an emblem
+        val trait = emblemApiNameToTrait[completedItem] ?: return null
+        return emblemRecipes[trait]
+    }
 
     fun isComponent(apiName: String): Boolean = apiName in BASE_COMPONENTS
 
