@@ -2,6 +2,8 @@
 
 Kotlin Multiplatform app for TFT Set 17 comp recommendations, powered by data from [TFT Academy](https://tftacademy.com).
 
+**[Try it in your browser](https://jacobtabak.github.io/set17/)**
+
 ## What it does
 
 Two modes for different stages of the game:
