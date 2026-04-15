@@ -9,8 +9,17 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.pointerHoverIcon
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -20,6 +29,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import dev.set17.tftacademy.champion.ChampionData
+import dev.set17.tftacademy.champion.TeamCodeEncoder
 import dev.set17.tftacademy.model.Comp
 
 @Composable
@@ -64,8 +74,12 @@ fun CompDetailPanel(
         HorizontalDivider(color = TftColors.border)
 
         // Final board
-        SectionHeader("Final Board")
         val realChamps = comp.finalComp.filter { it.apiName in ChampionData.champions }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            SectionHeader("Final Board")
+            Spacer(Modifier.weight(1f))
+            CopyTeamCodeButton(realChamps.map { it.apiName })
+        }
         val activated = ChampionData.activatedTraits(realChamps.map { it.apiName })
         FlowRow(
             horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -184,4 +198,27 @@ private fun SectionHeader(text: String) {
         fontWeight = FontWeight.Bold,
         letterSpacing = 1.sp,
     )
+}
+
+@Composable
+private fun CopyTeamCodeButton(championApiNames: List<String>) {
+    val clipboardManager = LocalClipboardManager.current
+    var copied by remember { mutableStateOf(false) }
+
+    Text(
+        text = if (copied) "Copied!" else "Copy Team Code",
+        color = if (copied) TftColors.matchedChampion else TftColors.chipSelectedBorder,
+        fontSize = 11.sp,
+        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand).clickable {
+            clipboardManager.setText(AnnotatedString(TeamCodeEncoder.encode(championApiNames)))
+            copied = true
+        },
+    )
+
+    LaunchedEffect(copied) {
+        if (copied) {
+            kotlinx.coroutines.delay(2000)
+            copied = false
+        }
+    }
 }
