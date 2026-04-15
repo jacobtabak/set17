@@ -84,4 +84,4 @@ Scoring weights are named constants in `ScoringConfig.kt`. Key design decisions:
 
 ## Non-champion units
 
-The comp data includes non-champion entries (Relic, IvernMinion, Summon, Flex slots) that are filtered out in the UI by checking against `ChampionData.champions`.
+The comp data includes non-champion entries (Relic, Summon, Flex slots) that are filtered out in the UI by checking against `ChampionData.champions`. Note: TFT Academy uses `TFT17_IvernMinion` for Meepsie — `ChampionData` has entries for both apiNames.

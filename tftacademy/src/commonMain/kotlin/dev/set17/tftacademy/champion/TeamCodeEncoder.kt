@@ -55,6 +55,7 @@ object TeamCodeEncoder {
         "TFT17_Maokai" to 30,
         "TFT17_MasterYi" to 47,
         "TFT17_Meepsie" to 20,
+        "TFT17_IvernMinion" to 20,
         "TFT17_Milio" to 61,
         "TFT17_MissFortune" to 1,
         "TFT17_Mordekaiser" to 78,

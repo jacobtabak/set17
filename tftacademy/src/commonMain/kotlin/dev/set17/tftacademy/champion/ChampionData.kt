@@ -43,6 +43,7 @@ object ChampionData {
         "TFT17_Maokai" to ChampionInfo("Maokai", 3, listOf("N.O.V.A.", "Brawler")),
         "TFT17_MasterYi" to ChampionInfo("Master Yi", 4, listOf("Psionic", "Marauder")),
         "TFT17_Meepsie" to ChampionInfo("Meepsie", 2, listOf("Meeple", "Shepherd", "Voyager")),
+        "TFT17_IvernMinion" to ChampionInfo("Meepsie", 2, listOf("Meeple", "Shepherd", "Voyager")),
         "TFT17_Milio" to ChampionInfo("Milio", 2, listOf("Timebreaker", "Fateweaver")),
         "TFT17_MissFortune" to ChampionInfo("Miss Fortune", 3, listOf("Gun Goddess")),
         "TFT17_Mordekaiser" to ChampionInfo("Mordekaiser", 2, listOf("Dark Star", "Conduit", "Vanguard")),
