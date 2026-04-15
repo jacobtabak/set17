@@ -27,7 +27,10 @@ jobs:
           distribution: temurin
           java-version: 21
       - uses: gradle/actions/setup-gradle@v4
-      - run: ./gradlew :composeApp:wasmJsBrowserDistribution
+      - name: Build WASM distribution
+        run: |
+          sed -i "s|org.gradle.java.home=.*|org.gradle.java.home=$JAVA_HOME|" gradle.properties
+          ./gradlew :composeApp:wasmJsBrowserDistribution
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

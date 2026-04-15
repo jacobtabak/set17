@@ -8,7 +8,7 @@ config.resolve.fallback = {
     path: false,
 };
 
-// sql.js worker expects sql-wasm.wasm at the web root
+// sql.js worker expects sql-wasm.wasm alongside the worker chunk
 config.plugins = config.plugins || [];
 config.plugins.push(
     new CopyPlugin({
@@ -18,3 +18,27 @@ config.plugins.push(
         }],
     })
 );
+
+// The @cashapp/sqldelight-sqljs-worker package hardcodes locateFile: file => '/sql-wasm.wasm'
+// with an absolute path. This breaks on subpath deployments (e.g. GitHub Pages at /repo-name/).
+// Replace with a relative path so it resolves relative to the worker script URL.
+config.plugins.push({
+    apply(compiler) {
+        compiler.hooks.thisCompilation.tap('FixSqlWasmPath', (compilation) => {
+            compilation.hooks.processAssets.tap(
+                { name: 'FixSqlWasmPath', stage: compiler.webpack.Compilation.PROCESS_ASSETS_STAGE_OPTIMIZE_SIZE + 1 },
+                (assets) => {
+                    for (const [name, source] of Object.entries(assets)) {
+                        if (!name.endsWith('.js')) continue;
+                        const code = source.source().toString();
+                        if (!code.includes('/sql-wasm.wasm')) continue;
+                        const { sources: { RawSource } } = compiler.webpack;
+                        compilation.updateAsset(name, new RawSource(
+                            code.replace(/(['"])\/(sql-wasm\.wasm)\1/g, '$1$2$1')
+                        ));
+                    }
+                }
+            );
+        });
+    }
+});
