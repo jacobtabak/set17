@@ -11,8 +11,8 @@ suspend fun createDatabase(driverFactory: DriverFactory): TftAcademyDatabase {
     val driver = driverFactory.createDriver()
     try {
         TftAcademyDatabase.Schema.create(driver).await()
-    } catch (_: Exception) {
-        // Schema already exists (persisted desktop DB)
+    } catch (e: Exception) {
+        if (e.message?.contains("already exists", ignoreCase = true) != true) throw e
     }
     return TftAcademyDatabase(driver)
 }
