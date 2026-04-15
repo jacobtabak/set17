@@ -17,8 +17,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -90,6 +92,7 @@ fun EarlyGameScreen(
         state = state.copy(recommendations = recs)
     }
 
+    val scope = rememberCoroutineScope()
     Box(modifier = Modifier.fillMaxSize().background(TftColors.background).statusBarsPadding()) {
         when {
             state.loading -> {
@@ -110,7 +113,6 @@ fun EarlyGameScreen(
                 )
             }
             else -> {
-                val scope = rememberCoroutineScope()
                 BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
                     val isWide = maxWidth >= WIDE_BREAKPOINT
 
@@ -153,6 +155,31 @@ fun EarlyGameScreen(
                     val onTabChanged = { phase: GamePhase ->
                         state = state.copy(selectedTab = phase)
                     }
+                    val onRefresh = {
+                        state = state.copy(loading = true)
+                        scope.launch {
+                            try {
+                                withContext(Dispatchers.Default) {
+                                    repo.refresh()
+                                    engine.init()
+                                }
+                                state = state.copy(
+                                    loading = false,
+                                    selectedComp = null,
+                                    earlyChampionPool = engine.getEarlyChampionPool(),
+                                    championScores = engine.scoreChampions(),
+                                    lateChampionScores = engine.scoreLateChampions(),
+                                    componentScores = engine.scoreComponents(),
+                                    itemScores = engine.scoreItems(),
+                                    allComps = engine.allComps(),
+                                    unknownEmblems = engine.unknownEmblems,
+                                )
+                            } catch (e: Exception) {
+                                state = state.copy(loading = false, error = e.message)
+                            }
+                        }
+                        Unit
+                    }
                     val incrementComponent = { c: String ->
                         val cur = state.componentCounts[c] ?: 0
                         if (cur < 3) state = state.copy(componentCounts = state.componentCounts + (c to cur + 1))
@@ -178,6 +205,7 @@ fun EarlyGameScreen(
 
                             onTabChanged = onTabChanged,
                             onClearAll = clearAll,
+                            onRefresh = onRefresh,
                             onSelectComp = { slug ->
                                 if (state.selectedComp?.compSlug == slug) {
                                     state = state.copy(selectedComp = null)
@@ -202,6 +230,7 @@ fun EarlyGameScreen(
 
                             onTabChanged = onTabChanged,
                             onClearAll = clearAll,
+                            onRefresh = onRefresh,
                             onSelectComp = { slug -> onNavigateToComp(slug) },
                         )
                     }
@@ -224,6 +253,7 @@ private fun WideLayout(
 
     onTabChanged: (GamePhase) -> Unit,
     onClearAll: () -> Unit,
+    onRefresh: () -> Unit,
     onSelectComp: (String) -> Unit,
     onCloseDetail: () -> Unit,
 ) {
@@ -244,6 +274,7 @@ private fun WideLayout(
 
             onTabChanged = onTabChanged,
             onClearAll = onClearAll,
+            onRefresh = onRefresh,
             onSelectComp = onSelectComp,
             modifier = Modifier.weight(1f).fillMaxHeight(),
         )
@@ -275,6 +306,7 @@ private fun NarrowLayout(
 
     onTabChanged: (GamePhase) -> Unit,
     onClearAll: () -> Unit,
+    onRefresh: () -> Unit,
     onSelectComp: (String) -> Unit,
 ) {
     ListColumn(
@@ -287,6 +319,7 @@ private fun NarrowLayout(
         onDecrementFullItem = onDecrementFullItem,
         onTabChanged = onTabChanged,
         onClearAll = onClearAll,
+        onRefresh = onRefresh,
         onSelectComp = onSelectComp,
         modifier = Modifier.fillMaxSize(),
     )
@@ -304,6 +337,7 @@ private fun ListColumn(
 
     onTabChanged: (GamePhase) -> Unit,
     onClearAll: () -> Unit,
+    onRefresh: () -> Unit,
     onSelectComp: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -322,11 +356,21 @@ private fun ListColumn(
     Column(modifier = modifier) {
         // Tabs — fixed, not scrollable
         Row(
-            modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 8.dp),
+            modifier = Modifier.padding(start = 16.dp, end = 4.dp, top = 16.dp, bottom = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             TabLabel("EARLY GAME", selected = !isLate, onClick = { onTabChanged(GamePhase.EARLY) })
             TabLabel("LATE GAME", selected = isLate, onClick = { onTabChanged(GamePhase.LATE) })
+            Spacer(Modifier.weight(1f))
+            IconButton(onClick = onRefresh, modifier = Modifier.size(32.dp)) {
+                Icon(
+                    imageVector = Icons.Filled.Refresh,
+                    contentDescription = "Refresh",
+                    tint = TftColors.textMuted,
+                    modifier = Modifier.size(18.dp),
+                )
+            }
         }
 
     androidx.compose.foundation.lazy.LazyColumn(

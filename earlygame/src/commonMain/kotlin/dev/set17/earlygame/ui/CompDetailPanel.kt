@@ -101,12 +101,13 @@ fun CompDetailPanel(
                 for (champ in comp.finalComp) {
                     val info = ChampionData.champions[champ.apiName] ?: continue
                     val stars = if (champ.stars > 1) " \u2605".repeat(champ.stars) else ""
-                    Text(
-                        text = "${info.name}$stars",
-                        color = TftColors.costColor(info.cost),
-                        fontSize = 13.sp,
-                        modifier = Modifier.fillMaxWidth().height(24.dp),
-                    )
+                    Box(modifier = Modifier.fillMaxWidth().height(28.dp), contentAlignment = Alignment.CenterStart) {
+                        Text(
+                            text = "${info.name}$stars",
+                            color = TftColors.costColor(info.cost),
+                            fontSize = 13.sp,
+                        )
+                    }
                 }
             }
             Spacer(Modifier.width(12.dp))
@@ -117,7 +118,7 @@ fun CompDetailPanel(
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(4.dp),
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.height(24.dp),
+                        modifier = Modifier.height(28.dp),
                     ) {
                         for (item in champ.items) {
                             ItemIcon(apiName = item, modifier = Modifier.height(20.dp))
