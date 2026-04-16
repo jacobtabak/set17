@@ -185,6 +185,27 @@ SELECT DISTINCT api_name FROM comp_champion WHERE role = ? ORDER BY api_name;
 compCount:
 SELECT COUNT(*) FROM comp;
 
+deleteAllChampionItems:
+DELETE FROM champion_item;
+
+deleteAllMaxcapPredecessors:
+DELETE FROM maxcap_predecessor;
+
+deleteAllCompChampions:
+DELETE FROM comp_champion;
+
+deleteAllCompAugments:
+DELETE FROM comp_augment;
+
+deleteAllCompAugmentTypes:
+DELETE FROM comp_augment_type;
+
+deleteAllCompCarousel:
+DELETE FROM comp_carousel;
+
+deleteAllCompTips:
+DELETE FROM comp_tip;
+
 deleteAllComps:
 DELETE FROM comp;
 

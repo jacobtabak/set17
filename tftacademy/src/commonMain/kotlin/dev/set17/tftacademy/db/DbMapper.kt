@@ -20,6 +20,14 @@ class DbMapper(private val database: TftAcademyDatabase) {
 
     suspend fun replaceAll(comps: List<ParsedComp>) {
         database.transaction {
+            // Delete children first — don't rely on CASCADE
+            q.deleteAllChampionItems()
+            q.deleteAllMaxcapPredecessors()
+            q.deleteAllCompChampions()
+            q.deleteAllCompAugments()
+            q.deleteAllCompAugmentTypes()
+            q.deleteAllCompCarousel()
+            q.deleteAllCompTips()
             q.deleteAllComps()
             comps.forEach { insertComp(it) }
         }
