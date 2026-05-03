@@ -36,6 +36,7 @@ class EarlyGameEngine(
             for (champ in comp.finalComp) {
                 for (item in champ.items) {
                     if (item.contains("Emblem", ignoreCase = true) &&
+                        item !in ItemComponentMap.emblemApiNameToTrait &&
                         ItemComponentMap.componentsOf(item) == null
                     ) {
                         unknown.add(item)
@@ -143,6 +144,17 @@ class EarlyGameEngine(
             val tank = findTank(comp)
             val tankItems = tank?.items?.filter { ItemComponentMap.componentsOf(it) != null } ?: emptyList()
             val (emblemItems, supportItems) = findSupportItems(comp, tank)
+
+            // Hard filter: skip comps requiring a craftable emblem the user can't obtain
+            val unsatisfied = emblemItems.any { item ->
+                val trait = ItemComponentMap.emblemApiNameToTrait[item] ?: return@any false
+                val recipe = ItemComponentMap.emblemRecipes[trait] ?: return@any false
+                val hasEmblem = (fullItemCounts[item] ?: 0) > 0
+                val hasCraftingItem = (componentCounts[recipe.first] ?: 0) > 0
+                !hasEmblem && !hasCraftingItem
+            }
+            if (unsatisfied) return@mapNotNull null
+
             val allCompItems = carryItemList + emblemItems + tankItems + supportItems
 
             // Phase 0: full item direct matches (user already has completed items)

@@ -108,6 +108,7 @@ object ItemComponentMap {
         "TFT17_Item_DRXEmblemItem" to "N.O.V.A.",
         "TFT17_Item_DarkStarEmblemItem" to "Dark Star",
         "TFT17_Item_PsyOpsEmblemItem" to "Psionic",
+        "TFT17_Item_RangedTraitEmblemItem" to "Sniper",
         "TFT17_Item_ShieldTankEmblemItem" to "Bastion",
         "TFT17_Item_SpaceGrooveEmblemItem" to "Space Groove",
         "TFT17_Item_StargazerEmblemItem" to "Stargazer",

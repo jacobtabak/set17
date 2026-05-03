@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import dev.set17.tftacademy.champion.ChampionData
@@ -100,13 +101,24 @@ fun CompDetailPanel(
             Column(modifier = Modifier.width(IntrinsicSize.Max)) {
                 for (champ in comp.finalComp) {
                     val info = ChampionData.champions[champ.apiName] ?: continue
-                    val stars = if (champ.stars > 1) " \u2605".repeat(champ.stars) else ""
                     Box(modifier = Modifier.fillMaxWidth().height(28.dp), contentAlignment = Alignment.CenterStart) {
-                        Text(
-                            text = "${info.name}$stars",
-                            color = TftColors.costColor(info.cost),
-                            fontSize = 13.sp,
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = info.name,
+                                color = TftColors.costColor(info.cost),
+                                fontSize = 13.sp,
+                            )
+                            if (champ.stars > 1) {
+                                repeat(champ.stars) {
+                                    Icon(
+                                        imageVector = Icons.Filled.Star,
+                                        contentDescription = null,
+                                        tint = TftColors.costColor(info.cost),
+                                        modifier = Modifier.size(10.dp),
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }
