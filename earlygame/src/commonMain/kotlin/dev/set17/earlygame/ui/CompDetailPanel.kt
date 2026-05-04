@@ -31,6 +31,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import dev.set17.tftacademy.champion.ChampionData
 import dev.set17.tftacademy.champion.TeamCodeEncoder
+import dev.set17.tftacademy.item.ItemComponentMap
 import dev.set17.tftacademy.model.Comp
 
 @Composable
@@ -81,12 +82,23 @@ fun CompDetailPanel(
             Spacer(Modifier.weight(1f))
             CopyTeamCodeButton(realChamps.map { it.apiName })
         }
-        val activated = ChampionData.activatedTraits(realChamps.map { it.apiName })
+        val traitCounts = ChampionData.activeTraits(realChamps.map { it.apiName }).toMutableMap()
+        for (champ in realChamps) {
+            for (item in champ.items) {
+                val trait = ItemComponentMap.emblemApiNameToTrait[item] ?: continue
+                traitCounts[trait] = (traitCounts[trait] ?: 0) + 1
+            }
+        }
+        val activated = traitCounts.entries.mapNotNull { (trait, count) ->
+            val breakpoints = ChampionData.traitBreakpoints[trait] ?: return@mapNotNull null
+            val activeTier = breakpoints.count { count >= it }
+            if (activeTier > 0) trait to (count to activeTier) else null
+        }.sortedByDescending { it.second.first }
         FlowRow(
             horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            for ((trait, pair) in activated.entries.sortedByDescending { it.value.first }) {
+            for ((trait, pair) in activated) {
                 val (count, _) = pair
                 Text(
                     text = "$count $trait",
